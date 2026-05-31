@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+
+:root {
+    --primary-color: #4E67F6;
+    --success-color: #22C55E;
+    --danger-color: #EF4444;
+    --light-gray: #F8F9FA;
+    --medium-gray: #E9ECEF;
+    --dark-gray: #343A40;
+    --text-color: #212529;
+}
+
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0;
+    background-color: var(--light-gray);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: var(--text-color);
+}
+
+.container {
+    background-color: white;
+    width: 100%;
+    max-width: 480px;
+    height: 100vh;
+    box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+    /* overflow-y: auto; - Removed to allow individual scrolling of main */
+}
+
+h1, h2, p {
+    margin: 0;
+}
+
+button {
+    font-family: 'Noto Sans KR', sans-serif;
+    border: none;
+    cursor: pointer;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    width: 100%;
+}
+.btn-primary:hover {
+    background-color: #3c50c4;
+}
+
+.btn-secondary {
+    background-color: var(--medium-gray);
+    color: var(--dark-gray);
+    border: none;
+}
+.btn-secondary:hover {
+    background-color: #ced4da;
+}
+
+
+nav {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: white;
+    border-top: 1px solid var(--medium-gray);
+    padding: 10px 0;
+    margin-top: auto; /* Pushes nav to the bottom */
+}
+
+nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #888;
+    font-size: 12px;
+}
+
+nav a.active {
+    color: var(--primary-color);
+}
+
+nav a i {
+    font-size: 28px; /* Adjust size for font icons */
+    margin-bottom: 4px;
+    color: #888; /* Default color */
+}
+
+nav a.active i {
+    color: var(--primary-color); /* Active color */
+}
+

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>불법 도박 사이트 신고 대시보드</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚨 불법 도박 사이트 신고 대시보드</h1>
+            <p>AI로 탐지된 불법 도박 사이트 목록입니다</p>
+        </header>
+
+        <!-- 통계 섹션 -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-label">전체 불법 사이트</div>
+                <div class="stat-value" id="total-count">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">평균 신뢰도</div>
+                <div class="stat-value" id="avg-confidence">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">최근 업데이트</div>
+                <div class="stat-value" id="last-update">-</div>
+            </div>
+        </div>
+
+        <!-- 검색 및 필터 섹션 -->
+        <div class="search-section">
+            <input type="text" id="search-input" placeholder="URL 또는 키워드로 검색...">
+            <button id="refresh-btn" onclick="loadData()">🔄 새로고침</button>
+        </div>
+
+        <!-- 로딩 표시 -->
+        <div id="loading" class="loading">데이터를 불러오는 중...</div>
+        
+        <!-- 에러 메시지 -->
+        <div id="error" class="error" style="display: none;"></div>
+
+        <!-- 테이블 섹션 -->
+        <div class="table-container">
+            <table id="sites-table">
+                <thead>
+                    <tr>
+                        <th>아이콘</th>
+                        <th>URL</th>
+                        <th>검색 키워드</th>
+                        <th>신뢰도</th>
+                        <th>수집 일시</th>
+                        <th>상세보기</th>
+                    </tr>
+                </thead>
+                <tbody id="sites-tbody">
+                    <!-- 데이터가 JavaScript로 삽입됨 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 상세정보 모달 -->
+    <div id="detail-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>상세 정보</h2>
+            <div id="modal-body">
+                <!-- 상세 정보가 JavaScript로 삽입됨 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JavaScript 클라이언트 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+

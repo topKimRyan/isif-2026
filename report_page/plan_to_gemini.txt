@@ -1,0 +1,202 @@
+참고사항
+1. 신고기능구현을 위한 js는 각 페이지별로 각각의 파일로 존재한다.
+2. 보안을 위해 report.html에서 url을 입력하면 supabase에 저장되고 해당 row의 신고 고유 ID (UUID)가 local에 임시저장된다.
+   다른 페이지에서는 UUID를 통해 database에서 현재신행 상황을 가져온다.
+3. local에 저장된 정보는 신고가 완료되거나 취소 등의 상황 종료가 이루어졌을 때 삭제되어야 한다.
+4. 서버 코드는 /report_page에 새로운 폴더를 만들고 그 안에 작성한다.
+
+신고 시스템 최종 구현 정리본
+1. 시스템 개요
+
+본 시스템은 사용자가 신고 대상 URL을 입력하면
+AI 기반 분석을 통해 불법 여부를 판단하고,
+사용자 확인 이후 증거 수집 및 신고 데이터를 생성하는 웹 기반 신고 보조 시스템이다.
+
+프론트엔드와 서버는 직접 통신하지 않으며,
+Supabase Realtime Database를 이벤트 기반 통신 수단으로 사용한다.
+
+2. 사용 기술 및 구조
+
+Backend: Python
+
+AI 검증: ../src/gemini_classifier.py
+
+Database: Supabase Realtime Database
+
+Storage: Supabase Storage
+
+서버 역할: 상태 기반 작업 처리 워커
+
+통신 방식: Database 상태 변경 감지 방식
+
+3. 데이터 구조
+report_requests 테이블
+컬럼명	설명
+id	신고 고유 ID (UUID)
+url	신고 대상 URL
+status	처리 상태
+is_illegal	AI 불법 판단 여부 (boolean)
+confidence	AI 판단 신뢰도
+reason	불법 판단 사유 (text)
+detected_keywords	탐지된 핵심 키워드
+screenshot_url	스크린샷 이미지 URL
+created_at	생성 시각
+status 값 목록
+
+submitted
+
+analyzed
+
+confirmed
+
+reported
+
+cancel
+
+4. 전체 처리 흐름
+
+프론트엔드는 URL을 입력받아 reports_requests 테이블에 새 row를 생성한다.
+이때 status는 submitted로 설정한다.
+
+서버는 status가 submitted인 row를 감지하면 AI 분석을 수행한다.
+
+AI 분석 결과를 reports_requests 테이블에 업데이트하고 status를 analyzed로 변경한다.
+
+프론트엔드는 analyzed 상태의 데이터를 사용자에게 표시한다.
+
+사용자는 분석 결과를 확인하고, 필요 시 사유(reason)를 수정한 후 신고를 진행한다.
+
+프론트엔드는 status를 confirmed로 변경하여 신고 요청을 전달한다.
+
+서버는 confirmed 상태를 감지하면 스크린샷 캡처를 수행한다.
+
+스크린샷을 Supabase Storage에 업로드하고, 해당 URL을 reports_requests 테이블에 저장한다.
+
+서버는 status를 reported로 변경하여 모든 처리를 완료한다.
+
+5. 취소 처리
+
+사용자는 analyzed 또는 confirmed 단계에서 취소할 수 있다.
+
+취소 시 status는 cancel로 변경된다.
+
+서버는 cancel 상태의 row에 대해 어떠한 작업도 수행하지 않는다.
+
+cancel은 최종 상태이며 이후 상태 변경은 허용되지 않는다.
+
+6. 서버 역할 상세
+서버는 다음 작업만 수행한다.
+
+submitted 상태 감지 → AI 분석 실행
+
+confirmed 상태 감지 → 스크린샷 캡처 및 저장
+
+각 단계에서 결과를 database에 기록
+
+서버는 다음 작업을 수행하지 않는다.
+
+프론트엔드 직접 통신
+
+UI 렌더링
+
+사용자 입력 검증
+
+7. 서버 내부 구조 (권장)
+
+worker.py
+
+Supabase realtime 구독
+
+상태에 따라 작업 분기
+
+handlers/analyze.py
+
+gemini_classifier 호출
+
+분석 결과 database 반영
+
+handlers/screenshot.py
+
+웹페이지 캡처
+
+Storage 업로드
+
+8. 프론트엔드 역할
+
+URL 입력 및 reports_requests row 생성
+
+database realtime 구독
+
+status 변화에 따른 화면 전환
+
+analyzed 결과 표시
+
+신고 승인 및 취소 처리
+
+9. 상태 전이 규칙
+
+submitted → analyzed 또는 cancel
+
+analyzed → confirmed 또는 cancel
+
+confirmed → reported 또는 cancel
+
+reported → 종료 상태
+
+cancel → 종료 상태
+
+10. 구현 시 유의사항
+
+status 기반 로직을 엄격히 유지한다.
+
+서버는 항상 현재 status를 확인한 후 작업을 수행한다.
+
+하나의 row는 한 번에 하나의 작업만 수행되도록 한다.
+
+실패 상황에서는 cancel 상태로 명확히 종료한다.
+
+이 문서는
+“무엇을 만들어야 하는지”를 정확히 정의하는 구현 기준 문서이며,
+Gemini CLI를 사용한 코드 생성 시 참조 문서로 사용한다.
+
+======= 아래는 페이지별 내용 =======
+
+1페이지
+메인 페이지로 "온라인 도박 신고하기"를 누르면 2로 넘어감.
+다른 버튼은 작동 안함
+
+2페이지
+"입력공간"에 URL을 입력할 수 있음. 사이트 검증 요청을 누르면, 로딩 오버레이가 뜸.(3페이지)
+
+3페이지
+로딩 스피너(/img/loading.png)가 계속 돌고, 내부의 AI 아이콘(/img/ai icon.svg)은 돌지 않음.
+
+4.1페이지
+AI 검증 결과 불법 사이트가 맞다면 3페이지의 오버레이가 4.1로 바뀜.(2페이지 위에 4.1의 오버레이가 뜸)
+몇 초 후 5.1.1로 넘어감
+
+4.2페이지
+AI 검증 결과 불법 사이트가 아니라면 3페이지의 오버레이가 4.2로 바뀜.(2페이지 위에 4.2의 오버레이가 뜸)
+몇 초 후 5.2로 넘어감
+
+5.1.1페이지
+모든 정보는 수정할 수 없는 상태(보기 전용)
+신고하기를 누르면 로딩 오버레이가 뜸.(5.1.3페이지)
+수정하기를 누르면 5.1.2페이지로 넘어감
+취소하기를 누르면 1로 돌아감
+멘 위의 뒤로가기를 누르면 2로 돌아감
+
+5.1.2페이지
+모든 정보(키워드 포함)를 수정 가능
+확인을 누르면 5.1.1로 넘어감(수정한 내용이 적용되야함)
+
+5.1.3페이지
+신고가 완료되면 6으로 넘어감.
+
+5.2페이지
+모든 정보는 수정할 수 없는 상태(보기 전용)
+종료하기를 누르면 1로 돌아감.
+멘 위의 뒤로가기를 누르면 2로 돌아감.
+
+6페이지
+잠시 후 1로 돌아감.

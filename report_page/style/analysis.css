@@ -1,0 +1,74 @@
+.centered-main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    text-align: center;
+}
+
+.analysis-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* padding-top: 50px; - Removed */
+}
+
+.icon-group {
+    position: relative;
+    width: 100px; /* Adjusted size */
+    height: 100px; /* Adjusted size */
+    margin-bottom: 40px; /* Adjusted space between icon group and text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.icon-group .loading-spinner-icon {
+    width: 170px; /* Adjusted size */
+    height: 170px; /* Adjusted size */
+    animation: spin 2s linear infinite;
+    position: absolute;
+    transform: translate(-50%, -50%); /* Center it perfectly within icon-group */
+    opacity: 1; /* Make it fully opaque */
+    z-index: 2; /* Ensure spinner is above icon */
+}
+
+.icon-group .ai-static-icon, .icon-group i {
+    font-size: 50px; /* For font icon */
+    width: 60px;
+    height: 60px;
+    color: var(--primary-color); /* Explicitly set color */
+    position: absolute; /* To precisely overlay */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center it perfectly within icon-group */
+    z-index: 1; /* Ensure icon is below spinner */
+}
+
+.text-content {
+    text-align: center;
+    margin-top: 40px; /* Increased space between icon group and text */
+}
+
+.text-content h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 10px; /* Adjusted */
+}
+
+.text-content p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 50px; /* Increased margin */
+}
+
+.analysis-content button {
+    width: 100%;
+    max-width: 300px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

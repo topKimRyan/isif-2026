@@ -1,0 +1,15 @@
+[project]
+name = "illicit-gambling-detector"
+version = "0.1.0"
+description = "Keyword-based illegal gambling domain detection crawler"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "supabase",
+    "selenium>=4.15.0",
+    "beautifulsoup4>=4.12.0",
+    "webdriver-manager>=4.0.0",
+    "httpx>=0.25.0",
+    "psycopg2-binary>=2.9.0",
+    "python-dotenv>=1.0.0"
+]

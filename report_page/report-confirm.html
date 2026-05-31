@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>분석 결과 및 신고 확인</title>
+    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="style/report.css">
+    <!-- TODO: Replace with actual Freepik CSS CDN link -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@2.4.0/css/all/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <a href="#" id="back-button-dynamic" class="back-button">
+                <i class="fi fi-sr-arrow-left"></i>
+            </a>
+        </header>
+        <main>
+            <div id="dynamic-content">
+                <!-- Content will be dynamically inserted by JavaScript -->
+            </div>
+        </main>
+        <div class="button-group" id="dynamic-buttons">
+            <!-- Buttons will be dynamically inserted by JavaScript -->
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase_client.js"></script>
+    <script src="js/confirm.js"></script>
+</body>
+</html>

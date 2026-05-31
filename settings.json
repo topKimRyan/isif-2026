@@ -1,0 +1,9 @@
+{
+  "search_engine": "google",
+  "headless_mode": false,
+  "delay_between_searches": 5,
+  "max_links_per_search": 10,
+  "output_file": "results.json",
+  "remove_tracking_params": true,
+  "use_gemini_classifier": true
+}

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python3:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(source:*)",
+      "Bash(python:*)",
+      "Bash(snap install:*)",
+      "Bash(wget:*)",
+      "Read(//home/acdong/dlab/illicit-gambling-detector/src/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,402 @@
+.page-header {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px; /* Adjusted padding */
+    /* Removed position: absolute; top: 0; left: 0; right: 0; */
+    border-bottom: 1px solid #eee; /* Visual separation from content */
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.back-button {
+    text-decoration: none;
+}
+
+.back-button i {
+    font-size: 24px;
+    color: var(--text-color);
+}
+
+main {
+    padding: 20px 20px 200px; /* Adjusted padding-top and padding-bottom */
+    text-align: left;
+    flex-grow: 1; /* Allow main to grow and push buttons to bottom */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Enable scrolling for main content */
+    min-height: 0; /* Allow main to shrink within flex container */
+}
+
+main h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px; /* Reduced margin for combined content */
+}
+
+form label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+form input, form textarea {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+form input {
+    margin-bottom: 20px; /* Keep consistent margin */
+}
+
+form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.button-group {
+    position: fixed; /* Make button group fixed at the bottom */
+    bottom: 0;
+    left: 50%; /* Center the fixed element */
+    transform: translateX(-50%); /* Adjust for centering */
+    width: 100%;
+    max-width: 480px; /* Match container max-width */
+    background-color: white; /* Ensure buttons are visible over content */
+    padding: 15px 20px; /* Increased vertical padding to match design */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between stacked elements */
+    /* margin-top: auto; - not needed for fixed positioning */
+    border-top: 1px solid #eee; /* Visual separation */
+    z-index: 10; /* Ensure it's above other content */
+}
+
+.confirm-buttons-stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between '신고하기' and '수정하기' */
+    width: 100%; /* Take full width of parent */
+}
+
+/* Specific styling for btn-secondary within confirm-buttons-stacked */
+.confirm-buttons-stacked .btn-secondary {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.confirm-buttons-stacked .btn-secondary:hover {
+    background-color: var(--light-gray); /* Subtle hover effect */
+}
+
+.button-group button {
+    width: 100%; /* Ensure all buttons take full width */
+}
+
+.btn-text-only {
+    background-color: transparent;
+    color: #6c757d;
+    font-size: 14px;
+    width: 100%; /* Explicitly set width to 100% */
+    padding: 5px 20px;
+}
+
+
+.btn-text-only:hover {
+    color: var(--dark-gray);
+}
+
+
+/* Styles for report-complete.html specific main */
+body:has(main > .check-icon.completion-icon) main { /* Target main only when it contains the completion content */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 0; /* Remove padding for full centering */
+}
+
+/* Original completion-content styles applied directly to elements */
+.check-icon.completion-icon {
+    font-size: 160px; /* Base font size for the container */
+    width: 170px;
+    height: 170px;
+    line-height: 170px; /* Vertically center content */
+    border-radius: 50%;
+    margin: 0 auto 30px; /* Adjusted margin-bottom */
+    /* background-color: var(--primary-color); */
+    color: white; /* 이 color는 div의 color라서 아이콘에 적용되려면 icon 자체에 색깔이 없어야 함 */
+    display: flex; /* Use flexbox to center the icon */
+    justify-content: center;
+    align-items: center;
+}
+
+.check-icon.completion-icon i {
+    color: var(--primary-color);
+    font-size: 160px; /* Specific font size for the icon itself */
+    line-height: 1; /* Reset line-height for the icon */
+}
+
+/* Styles for error icon, similar to completion icon but with danger color */
+.check-icon.error-icon {
+    font-size: 160px;
+    width: 170px;
+    height: 170px;
+    line-height: 170px;
+    border-radius: 50%;
+    margin: 0 auto 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.check-icon.error-icon i {
+    color: var(--danger-color); /* Use danger color for the error icon */
+    font-size: 160px;
+    line-height: 1;
+}
+
+body:has(main > .check-icon.completion-icon) h1 { /* Target h1 only when it's part of completion page */
+    font-size: 32px; /* Increased font-size */
+    font-weight: 700;
+    margin-bottom: 15px; /* Adjusted margin-bottom */
+}
+
+body:has(main > .check-icon.completion-icon) p { /* Target p only when it's part of completion page */
+    font-size: 18px; /* Adjusted font-size */
+    color: #666; /* Slightly lighter color */
+    line-height: 1.6;
+}
+
+/* Apply same layout for error page */
+body:has(main > .check-icon.error-icon) main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 0;
+}
+
+body:has(main > .check-icon.error-icon) h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+body:has(main > .check-icon.error-icon) p {
+    font-size: 18px;
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Styles from old result.css */
+.result-card {
+    border: 1px solid #ddd;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.result-icon {
+    font-size: 32px;
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    text-align: center;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*.result-icon.illegal {
+    background-color: var(--danger-color);
+}*/
+.result-icon.illegal i {
+    color: var(--danger-color);
+}
+
+/*.result-icon.legal {
+    background-color: var(--success-color);
+}*/
+.result-icon.legal i {
+    color: var(--success-color);
+}
+
+.result-icon i {
+    font-size: 32px;
+    line-height: 1;
+}
+
+
+.result-title h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.result-title p {
+    font-size: 14px;
+    color: #666;
+}
+
+.result-body h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+.result-body p, .result-body ul {
+    font-size: 16px;
+    color: #333;
+    line-height: 1.7;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.keyword-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.keyword-list li {
+    background-color: var(--medium-gray);
+    color: var(--dark-gray);
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+.btn-text-only {
+    background-color: transparent;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.btn-text-only:hover {
+    color: var(--dark-gray);
+}
+
+.minimal-card {
+    border: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.minimal-card .result-header {
+    margin-bottom: 0;
+}
+
+.minimal-card .result-icon {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+}
+
+.minimal-card .result-title h2 {
+    font-size: 20px;
+}
+
+.minimal-card .result-title p {
+    display: none; /* Hide subtitle in minimal card */
+}
+
+form#confirmation-form {
+    margin-top: 20px;
+}
+
+form#confirmation-form label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+form#confirmation-form input,
+form#confirmation-form textarea {
+    margin-bottom: 15px;
+}
+
+form#confirmation-form h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+form#confirmation-form .keyword-list {
+    margin-bottom: 20px;
+}
+
+/* Styles for editable keyword list */
+.keyword-list-editable {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.keyword-item {
+    background-color: var(--medium-gray);
+    color: var(--dark-gray);
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.keyword-item .delete-keyword {
+    background: none;
+    border: none;
+    color: var(--dark-gray);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.keyword-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.keyword-input-group input {
+    flex-grow: 1;
+    margin-bottom: 0; /* Override default form input margin */
+}
+
+.keyword-input-group button {
+    flex-shrink: 0;
+    width: auto; /* Allow button to size according to content */
+    padding: 10px 15px; /* Adjust padding for smaller button */
+    border-radius: 10px;
+}
+

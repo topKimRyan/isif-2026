@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 분석중</title>
+    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="style/analysis.css">
+    <!-- TODO: Replace with actual Freepik CSS CDN link -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@2.4.0/css/all/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <main class="centered-main">
+            <div class="analysis-content">
+                <div class="icon-group">
+                    <img src="img/loading.png" alt="로딩 스피너" class="loading-spinner-icon"/>
+                    <img src="img/ai icon.svg" alt="AI 분석중" class="ai-static-icon"/>
+                </div>
+                <div class="text-content">
+                    <h1>AI 분석중...</h1>
+                    <p>온라인 도박 사이트가 맞는지 분석하고 있어요</p>
+                </div>
+                <button type="button" class="btn-secondary" id="cancel-button">취소하기</button>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase_client.js"></script>
+    <script src="js/analysis.js"></script>
+</body>
+</html>
