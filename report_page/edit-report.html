@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>신고 내용 수정</title>
+    <title>Edit Report</title>
     <link rel="stylesheet" href="style/style.css">
     <link rel="stylesheet" href="style/report.css">
     <!-- TODO: Replace with actual Freepik CSS CDN link -->
@@ -17,22 +17,22 @@
             </a>
         </header>
         <main>
-            <h1>내용을 수정해주세요</h1>
+            <h1>Edit the details below</h1>
             <form>
-                <label for="reason">이유</label>
-                <textarea id="reason" name="reason" rows="4">사행성 조장, 불법 배팅 관련 키워드가 다수 발견되었습니다.</textarea>
+                <label for="reason">Reason</label>
+                <textarea id="reason" name="reason" rows="4">Multiple keywords related to gambling promotion and illegal betting were detected.</textarea>
 
-                <h3>탐지된 키워드</h3>
+                <h3>Detected Keywords</h3>
                 <div class="keyword-input-group">
-                    <input type="text" id="new-keyword-input" placeholder="새 키워드">
-                    <button type="button" class="btn-primary" id="add-keyword-button">추가</button>
+                    <input type="text" id="new-keyword-input" placeholder="New keyword">
+                    <button type="button" class="btn-primary" id="add-keyword-button">Add</button>
                 </div>
                 <div id="keyword-list-editable" class="keyword-list-editable">
                     <!-- Keywords will be dynamically inserted here -->
                 </div>
 
                 <div class="button-group">
-                    <button type="button" class="btn-primary" id="confirm-edit-button">확인</button>
+                    <button type="button" class="btn-primary" id="confirm-edit-button">Confirm</button>
                 </div>
             </form>
         </main>

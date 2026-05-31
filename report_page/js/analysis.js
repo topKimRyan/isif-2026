@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportId = params.get('id') || sessionStorage.getItem('report_id');
 
     if (!reportId) {
-        alert('신고 ID가 없습니다. 메인 페이지로 돌아갑니다.');
+        alert('No report ID found. Redirecting to the main page.');
         window.location.href = 'index.html';
         return;
     }
-    
+
     // Store it in session storage just in case it came from the URL
     if (params.get('id')) {
         sessionStorage.setItem('report_id', reportId);
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelButton) {
         cancelButton.addEventListener('click', async () => {
             if (!supabaseClient) {
-                alert('데이터베이스 연결에 실패했습니다.');
+                alert('Failed to connect to the database.');
                 return;
             }
             try {
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .eq('id', reportId);
 
                 if (error) throw error;
-                
+
                 sessionStorage.removeItem('report_id'); // Clean up
                 window.location.href = 'index.html';
             } catch (error) {
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!supabaseClient) {
-        alert('데이터베이스 연결에 실패했습니다.');
+        alert('Failed to connect to the database.');
         return;
     }
 
@@ -84,13 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'report-error.html'; // Redirect to error page for subscription errors
             }
         });
-    
+
     // Add a timeout for the analysis, in case the backend fails
     const timeout = setTimeout(async () => {
         supabaseClient.removeChannel(channel);
         // Check if we are still on the analysis page before showing the alert
-        if (window.location.pathname.includes('analysis.html')) { 
-             alert('분석 시간이 초과되었습니다. 다시 시도해주세요.');
+        if (window.location.pathname.includes('analysis.html')) {
+             alert('Analysis timed out. Please try again.');
              // Also cancel the report on the backend
              try {
                 await supabaseClient.from('report_requests').update({ status: 'cancel' }).eq('id', reportId);

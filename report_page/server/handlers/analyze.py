@@ -50,7 +50,7 @@ async def handle_analysis(supabase: Client, report: dict):
             print(f"[{report_id}] Failed to fetch HTML content for {url}")
             await supabase.table('report_requests').update({
                 'status': 'error', 
-                'reason': f"URL에서 콘텐츠를 가져올 수 없습니다: {url}"
+                'reason': f"Failed to fetch content from URL: {url}"
             }).eq('id', report_id).execute()
             return
 
@@ -83,7 +83,7 @@ async def handle_analysis(supabase: Client, report: dict):
         try:
             await supabase.table('report_requests').update({
                 'status': 'error',
-                'reason': f"분석 중 오류가 발생했습니다: {e}"
+                'reason': f"An error occurred during analysis: {e}"
             }).eq('id', report_id).execute()
         except Exception as db_error:
             print(f"[{report_id}] Failed to update report with error status: {db_error}")

@@ -82,7 +82,7 @@ async def handle_screenshot(supabase: Client, report: dict):
         try:
             await supabase.table('report_requests').update({
                 'status': 'error',
-                'reason': f"스크린샷 생성/업로드 중 오류 발생: {e}"
+                'reason': f"Error occurred during screenshot capture/upload: {e}"
             }).eq('id', report_id).execute()
         except Exception as db_error:
             print(f"[{report_id}] Failed to update report with error status: {db_error}")

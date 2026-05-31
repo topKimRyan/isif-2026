@@ -7,18 +7,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (urlInput && urlFromParams) {
         urlInput.value = decodeURIComponent(urlFromParams);
     }
-    
+
     if (analysisButton) {
         analysisButton.addEventListener('click', async () => {
             const url = urlInput.value.trim();
             if (!url) {
-                alert('사이트 URL을 입력해주세요.');
+                alert('Please enter a site URL.');
                 return;
             }
 
             // Check if supabase client is available
             if (!supabaseClient) {
-                alert('데이터베이스 연결에 실패했습니다. 설정을 확인해주세요.');
+                alert('Failed to connect to the database. Please check your settings.');
                 sessionStorage.removeItem('report_id'); // Clear session storage
                 window.location.href = 'report-error.html'; // Redirect to error page
                 return;
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Disable button to prevent multiple submissions
             analysisButton.disabled = true;
-            analysisButton.textContent = '분석 요청중...';
+            analysisButton.textContent = 'Requesting analysis...';
 
             try {
                 // 1. Insert the new report into the database

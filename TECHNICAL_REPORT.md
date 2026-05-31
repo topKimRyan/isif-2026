@@ -1,416 +1,416 @@
-# 인공지능 기반 불법 도박 사이트 탐지 시스템의 구조와 원리
+# Structure and Principles of an AI-Based Illegal Gambling Site Detection System
 
-## 기술 보고서 (Technical Report)
-
----
-
-## 목차 (Table of Contents)
-
-1. [요약](#요약-abstract)
-2. [서론](#1-서론-introduction)
-3. [핵심 문제 분석](#2-핵심-문제-분석-problem-analysis)
-4. [삼계층 아키텍처](#3-삼계층-아키텍처-three-tier-architecture)
-5. [폴백 메커니즘과 안정성](#4-폴백-메커니즘과-안정성-fallback-mechanism-and-stability)
-6. [시스템의 구조적 이점](#5-시스템의-구조적-이점-structural-advantages)
-7. [결론 및 학술적 의의](#6-결론-및-학술적-의의-conclusion-and-academic-significance)
-8. [참고문헌](#참고문헌-references)
+## Technical Report
 
 ---
 
-## 요약 (Abstract)
+## Table of Contents
 
-본 보고서는 검색 기반 불법 도박 사이트 자동 탐지 시스템의 **원리와 구조**를 중심으로 분석한다. 본 시스템은 세 가지 핵심 계층으로 구성된다: (1) **검색 계층** - Google 검색을 통한 후보 사이트 발굴, (2) **추출 계층** - 검색 결과에서 URL을 추출하고 정제, (3) **분류 계층** - 대규모 언어 모델(LLM)을 활용한 지능형 불법성 판별. 본 시스템의 핵심 혁신은 **폴백 메커니즘**(Selenium → HTTP 폴백)으로 자동화 장애에 대응하고, **의미론적 분석**을 통해 단순 메타데이터 기반 탐지보다 정확한 결과를 제공한다는 점이다. 이러한 구조는 확장 가능하며, 각 계층이 독립적으로 개선될 수 있도록 설계되었다.
-
-**주요 키워드**: 웹 크롤링 아키텍처, 폴백 메커니즘, LLM 기반 의미론적 분류, 계층형 설계, 자동화 안정성
-
----
-
-## 1. 서론 (Introduction)
-
-### 1.1 배경 및 필요성
-
-불법 온라인 도박은 전 세계적으로 심각한 사회 문제로 대두되고 있다. 특히 모바일 인터넷의 보급으로 불법 도박 사이트에 대한 접근이 용이해지면서, 이를 탐지하고 차단하기 위한 기술적 솔루션의 필요성이 증대되고 있다.
-
-기존의 탐지 방식은 두 가지 한계를 가진다:
-- **수동적 모니터링**: 인력이 직접 사이트를 확인하여 비효율적
-- **메타데이터 기반 분석**: WHOIS, DNS, SSL 인증서만 분석하여 정교한 위장 사이트 미탐지
-
-따라서 **자동화**와 **의미론적 분석**을 결합한 새로운 접근이 필요하다.
-
-### 1.2 시스템 설계의 핵심 철학
-
-본 시스템은 다음과 같은 설계 철학을 따른다:
-
-| 철학 | 의미 | 구현 방식 |
-|------|------|---------|
-| **계층 분리** | 각 기능을 독립적인 계층으로 분리 | 검색 → 추출 → 분류의 파이프라인 |
-| **견고성** | 부분 장애가 전체 실패로 이어지지 않음 | 폴백 메커니즘, 예외 처리 |
-| **의미론적 분석** | 단순 패턴 매칭이 아닌 내용 이해 | LLM 기반 분류 |
-| **확장성** | 새로운 기능 추가 용이 | 모듈식 설계 |
-
-### 1.3 보고서 구성
-
-본 보고서는 **구조와 원리**를 중심으로 작성된다. 제2장에서는 시스템이 해결해야 할 **핵심 문제들**을 분석하고, 제3장에서는 **삼계층 아키텍처**를 설명한다. 제4장에서는 각 계층의 **작동 원리**를 상세히 기술하며, 제5장에서는 **폴백 메커니즘**과 **안정성 설계**를 다룬다. 마지막으로 제6장에서 시스템의 특징과 의의를 정리한다.
+1. [Abstract](#abstract)
+2. [Introduction](#1-introduction)
+3. [Core Problem Analysis](#2-core-problem-analysis)
+4. [Three-Tier Architecture](#3-three-tier-architecture)
+5. [Fallback Mechanism and Stability](#4-fallback-mechanism-and-stability)
+6. [Structural Advantages of the System](#5-structural-advantages-of-the-system)
+7. [Conclusion and Academic Significance](#6-conclusion-and-academic-significance)
+8. [References](#references)
 
 ---
 
-## 2. 핵심 문제 분석 (Problem Analysis)
+## Abstract
 
-### 2.1 웹 크롤링이 직면한 기술적 도전
+This report focuses on analyzing the **principles and structure** of an automated search-based detection system for illegal gambling sites. The system consists of three core layers: (1) **Search Layer** — discovering candidate sites via Google search, (2) **Extraction Layer** — extracting and refining URLs from search results, and (3) **Classification Layer** — intelligent illegality determination using a Large Language Model (LLM). The key innovations of this system are a **fallback mechanism** (Selenium → HTTP fallback) that handles automation failures, and **semantic analysis** that provides more accurate results than simple metadata-based detection. This architecture is scalable and designed so that each layer can be improved independently.
 
-웹 크롤링 시스템이 안정적으로 작동하려면 다음과 같은 문제들을 해결해야 한다:
+**Keywords**: web crawling architecture, fallback mechanism, LLM-based semantic classification, layered design, automation stability
 
-#### 문제 1: 동적 콘텐츠 로딩
-- **현상**: 많은 현대 웹사이트는 JavaScript로 동적으로 콘텐츠를 로드한다
-- **해결책**: Selenium WebDriver를 사용하여 실제 브라우저에서 JavaScript를 실행한다
-- **원리**: 브라우저 자동화를 통해 최종 렌더링된 HTML을 얻을 수 있다
+---
 
-#### 문제 2: 자동화 탐지 및 차단
-- **현상**: 서버가 봇 요청을 감지하고 차단한다
-- **원인**: User-Agent, 요청 패턴, 브라우저 API 점검 등
-- **해결책**:
-  - User-Agent를 실제 브라우저처럼 위장
-  - 요청 간에 무작위 지연 추가 (2~4초)
-  - Webdriver 속성 숨기기
-- **한계**: 탐지 기술이 계속 발전하므로 완벽한 우회 불가능
+## 1. Introduction
 
-#### 문제 3: 단일 방식의 취약성
-- **현상**: Selenium이 실패하면 전체 시스템이 중단된다
-- **해결책**: **폴백 메커니즘** 도입
-  - 1차: Selenium으로 시도
-  - 2차: 실패 시 requests 라이브러리로 폴백
-  - 3차: 둘 다 실패하면 로깅 후 계속 진행
-- **의의**: 부분 실패가 전체 실패로 이어지지 않음
+### 1.1 Background and Motivation
 
-### 2.2 도박 사이트 탐지의 지능화 요구
+Illegal online gambling has emerged as a serious social problem worldwide. As mobile internet access has made it easier to reach illegal gambling sites, the need for technical solutions to detect and block them has grown significantly.
 
-#### 기존 메타데이터 기반 접근의 한계
+Existing detection methods have two key limitations:
+- **Manual monitoring**: Human reviewers directly verify sites, which is inefficient
+- **Metadata-based analysis**: Only WHOIS, DNS, and SSL certificates are analyzed, failing to detect sophisticated camouflaged sites
+
+Therefore, a new approach combining **automation** and **semantic analysis** is needed.
+
+### 1.2 Core Design Philosophy
+
+This system follows the design philosophy outlined below:
+
+| Philosophy | Meaning | Implementation |
+|------------|---------|----------------|
+| **Layer Separation** | Each function is separated into an independent layer | Search → Extraction → Classification pipeline |
+| **Robustness** | Partial failures do not lead to total failure | Fallback mechanism, exception handling |
+| **Semantic Analysis** | Content understanding rather than simple pattern matching | LLM-based classification |
+| **Scalability** | Easy to add new functionality | Modular design |
+
+### 1.3 Report Structure
+
+This report is written with a focus on **structure and principles**. Chapter 2 analyzes the **core problems** the system must solve. Chapter 3 describes the **three-tier architecture**. Chapter 4 details the **operating principles** of each layer. Chapter 5 covers the **fallback mechanism** and **stability design**. Finally, Chapter 6 summarizes the characteristics and significance of the system.
+
+---
+
+## 2. Core Problem Analysis
+
+### 2.1 Technical Challenges Facing Web Crawling
+
+For a web crawling system to operate reliably, the following problems must be addressed:
+
+#### Problem 1: Dynamic Content Loading
+- **Phenomenon**: Many modern websites load content dynamically via JavaScript
+- **Solution**: Use Selenium WebDriver to execute JavaScript in a real browser
+- **Principle**: Browser automation allows obtaining the final rendered HTML
+
+#### Problem 2: Automation Detection and Blocking
+- **Phenomenon**: Servers detect and block bot requests
+- **Causes**: User-Agent inspection, request pattern analysis, browser API checks, etc.
+- **Solutions**:
+  - Disguise User-Agent to resemble a real browser
+  - Add random delays between requests (2–4 seconds)
+  - Hide webdriver attributes
+- **Limitation**: Detection techniques continue to evolve, making complete bypass impossible
+
+#### Problem 3: Vulnerability of a Single Approach
+- **Phenomenon**: If Selenium fails, the entire system stops
+- **Solution**: Introduce a **fallback mechanism**
+  - 1st attempt: Try with Selenium
+  - 2nd attempt: Fall back to the requests library on failure
+  - 3rd attempt: Log and continue if both fail
+- **Significance**: Partial failure does not lead to total failure
+
+### 2.2 Demand for Intelligent Gambling Site Detection
+
+#### Limitations of Existing Metadata-Based Approaches
 ```
-전통적 방식:
-WHOIS 정보 → 등록자 정보 확인
-DNS 레코드 → 도메인 이력 분석
-SSL 인증서 → 인증서 발급자 확인
+Traditional approach:
+WHOIS info       → Verify registrant information
+DNS records      → Analyze domain history
+SSL certificate  → Verify certificate issuer
 
-한계:
-- 합법적 도메인도 정교하게 위장 가능
-- 정보 부재/위조로 판단 불가능
-- 탐지 규칙을 쉽게 우회 가능
-```
-
-#### LLM 기반 의미론적 분석의 필요성
-```
-혁신적 방식:
-URL의 실제 HTML 콘텐츠 분석
-→ 사이트의 의도, 기능, 서비스 파악
-→ 불법 도박 여부를 의미론적으로 판단
-
-장점:
-- 위장된 도메인 탐지 가능
-- 정교한 문맥 이해
-- 일관되게 업데이트되는 모델
+Limitations:
+- Legitimate domains can also be sophisticatedly disguised
+- Judgment impossible due to missing/forged information
+- Detection rules can be easily bypassed
 ```
 
-### 2.3 관련 기술 분석
+#### Necessity of LLM-Based Semantic Analysis
+```
+Innovative approach:
+Analyze the actual HTML content of each URL
+→ Understand the site's intent, functionality, and services
+→ Semantically determine whether it involves illegal gambling
 
-| 기술 | 역할 | 적용 이유 |
-|------|------|---------|
-| **Selenium** | 동적 웹 페이지 렌더링 | JavaScript 실행 필요 |
-| **requests** | 경량 HTTP 통신 | Selenium 장애 시 폴백 |
-| **BeautifulSoup** | HTML 파싱 및 URL 추출 | 효율적이고 안정적 |
-| **Gemini LLM** | 콘텐츠 의미 분석 | 텍스트 분류 SOTA 성능 |
-| **JSON 저장** | 결과 지속성 | 가볍고 호환성 높음 |
+Advantages:
+- Can detect disguised domains
+- Sophisticated contextual understanding
+- Continuously updated model
+```
+
+### 2.3 Technology Analysis
+
+| Technology | Role | Reason for Use |
+|------------|------|----------------|
+| **Selenium** | Dynamic web page rendering | Requires JavaScript execution |
+| **requests** | Lightweight HTTP communication | Fallback when Selenium fails |
+| **BeautifulSoup** | HTML parsing and URL extraction | Efficient and stable |
+| **Gemini LLM** | Semantic content analysis | State-of-the-art text classification performance |
+| **JSON storage** | Result persistence | Lightweight and highly compatible |
 
 ---
 
-## 3. 삼계층 아키텍처 (Three-Tier Architecture)
+## 3. Three-Tier Architecture
 
-### 3.1 아키텍처 개요
+### 3.1 Architecture Overview
 
-본 시스템은 **계층형 아키텍처** 패턴을 따른다. 각 계층은 명확한 책임을 가지며 독립적으로 동작한다.
+This system follows a **layered architecture** pattern. Each layer has a clear responsibility and operates independently.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  계층 3: 분류 계층 (Classification Layer)                │
-│  ├─ 목표: HTML 콘텐츠 분석, 불법 여부 판별             │
-│  └─ 구현: Gemini LLM API 활용                           │
+│  Layer 3: Classification Layer                           │
+│  ├─ Goal: Analyze HTML content, determine illegality     │
+│  └─ Implementation: Gemini LLM API                       │
 ├──────────────────────────────────────────────────────────┤
-│  계층 2: 추출 계층 (Extraction Layer)                    │
-│  ├─ 목표: HTML에서 URL 추출, 정제, 중복 제거           │
-│  └─ 구현: BeautifulSoup + 정규표현식                     │
+│  Layer 2: Extraction Layer                               │
+│  ├─ Goal: Extract, refine, and deduplicate URLs from HTML│
+│  └─ Implementation: BeautifulSoup + Regular Expressions  │
 ├──────────────────────────────────────────────────────────┤
-│  계층 1: 검색 계층 (Search Layer)                        │
-│  ├─ 목표: 키워드로 검색, HTML 수집                       │
-│  └─ 구현: Selenium + Requests Fallback                  │
+│  Layer 1: Search Layer                                   │
+│  ├─ Goal: Search by keyword, collect HTML                │
+│  └─ Implementation: Selenium + Requests Fallback         │
 ├──────────────────────────────────────────────────────────┤
-│  기초: 데이터 저장소 (Storage)                           │
-│  ├─ 목표: 결과 지속성, 중복 관리                        │
-│  └─ 구현: JSON 형식의 파일                               │
+│  Foundation: Data Storage                                │
+│  ├─ Goal: Result persistence, deduplication management   │
+│  └─ Implementation: JSON file format                     │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 계층별 역할 분석
+### 3.2 Layer-by-Layer Role Analysis
 
-#### **계층 1: 검색 계층 (Search Layer)**
+#### **Layer 1: Search Layer**
 
-**목표**: 키워드를 입력받아 검색 결과를 HTML 형태로 수집
+**Goal**: Accept search keywords and collect search results in HTML form
 
-**작동 원리**:
-1. 사용자가 검색 키워드 제시
-2. Google 검색 URL 생성
-3. Selenium WebDriver로 브라우저 제어
-4. 검색 페이지 로딩 및 JavaScript 실행
-5. 최종 렌더링된 HTML 반환
+**Operating Principle**:
+1. User provides search keywords
+2. Generate Google search URL
+3. Control browser with Selenium WebDriver
+4. Load search page and execute JavaScript
+5. Return final rendered HTML
 
-**핵심 특징**:
-- **동적 콘텐츠 처리**: JavaScript로 로드되는 콘텐츠까지 수집
-- **자동화 위장**: User-Agent 변조, 딜레이 추가
-- **내구성**: 세션 손실 시 자동 재초기화
+**Key Features**:
+- **Dynamic content handling**: Collects content loaded by JavaScript
+- **Automation disguise**: User-Agent spoofing, added delays
+- **Durability**: Automatic reinitialization on session loss
 
-**왜 이 방식인가?**:
-- 정적 HTML 파싱만으로는 현대 웹사이트의 동적 콘텐츠를 못 얻음
-- Selenium은 실제 브라우저를 제어하므로 JavaScript 실행 결과를 볼 수 있음
+**Why this approach?**:
+- Static HTML parsing alone cannot retrieve dynamic content from modern websites
+- Selenium controls a real browser, so the result of JavaScript execution is visible
 
-#### **계층 2: 추출 계층 (Extraction Layer)**
+#### **Layer 2: Extraction Layer**
 
-**목표**: HTML에서 유효한 URL을 추출하고 정제
+**Goal**: Extract valid URLs from HTML and refine them
 
-**작동 원리**:
+**Operating Principle**:
 ```
-입력 HTML
+Input HTML
   ↓
-1. BeautifulSoup으로 파싱
+1. Parse with BeautifulSoup
   ↓
-2. 모든 <a> 태그의 href 추출
+2. Extract href from all <a> tags
   ↓
-3. Google 리다이렉트 URL 풀어내기
-   예: /url?q=https://example.com&... → https://example.com
+3. Resolve Google redirect URLs
+   e.g., /url?q=https://example.com&... → https://example.com
   ↓
-4. 유효성 검사
-   - 프로토콜 확인 (http/https)
-   - 형식 검증 (정규표현식)
-   - 무효한 URL 제거 (javascript:, mailto: 등)
+4. Validation
+   - Check protocol (http/https)
+   - Format verification (regular expressions)
+   - Remove invalid URLs (javascript:, mailto:, etc.)
   ↓
-5. 추적 매개변수 제거
-   utm_source, fbclid, gclid 등 마케팅 추적 파라미터 삭제
+5. Remove tracking parameters
+   Delete marketing tracking params: utm_source, fbclid, gclid, etc.
   ↓
-6. 중복 제거 (Set 자료구조 활용)
+6. Deduplication (using Set data structure)
   ↓
-출력: 정제된 URL 목록
+Output: Refined URL list
 ```
 
-**핵심 개념: URL 정제의 필요성**
+**Key Concept: Why URL Refinement is Necessary**
 
-| 구분 | 예시 | 처리 방법 | 이유 |
-|------|------|---------|------|
-| **리다이렉트 URL** | `/url?q=xxx&...` | 쿼리 파라미터 파싱 | 실제 목표 URL 추출 |
-| **추적 파라미터** | `?utm_source=...` | 제거 | 중복 카운팅 방지 |
-| **유효하지 않은 URL** | `javascript:void(0)` | 제외 | 실제 접근 불가능 |
-| **상대 경로** | `/page` | 제외 | Google 내부 페이지 |
+| Type | Example | Processing Method | Reason |
+|------|---------|-------------------|--------|
+| **Redirect URL** | `/url?q=xxx&...` | Parse query parameters | Extract actual target URL |
+| **Tracking parameters** | `?utm_source=...` | Remove | Prevent duplicate counting |
+| **Invalid URL** | `javascript:void(0)` | Exclude | Not actually accessible |
+| **Relative path** | `/page` | Exclude | Google internal pages |
 
-#### **계층 3: 분류 계층 (Classification Layer)**
+#### **Layer 3: Classification Layer**
 
-**목표**: 추출된 각 URL의 HTML 콘텐츠를 분석하여 불법 도박 여부 판별
+**Goal**: Analyze the HTML content of each extracted URL to determine whether it involves illegal gambling
 
-**작동 원리**:
+**Operating Principle**:
 ```
 URL
   ↓
-1. HTTP 요청으로 HTML 다운로드
+1. Download HTML via HTTP request
   ↓
-2. HTML 크기 제한 (50,000자)
-   - 너무 큰 파일은 시간과 비용 낭비
-   - 핵심 정보는 처음 부분에 집중
+2. Limit HTML size (50,000 characters)
+   - Excessively large files waste time and cost
+   - Key information is concentrated in the beginning
   ↓
-3. Gemini LLM에 프롬프트와 함께 전송
-   프롬프트: "이 사이트가 불법 도박을 하나요?"
+3. Send to Gemini LLM with a prompt
+   Prompt: "Does this site conduct illegal gambling?"
   ↓
-4. LLM이 의미론적 분석 수행
-   - 텍스트의 맥락과 의도 파악
-   - 도박 관련 키워드 탐지
-   - 규제/라이선스 관련 정보 확인
+4. LLM performs semantic analysis
+   - Understand context and intent of text
+   - Detect gambling-related keywords
+   - Check regulation/license-related information
   ↓
-5. 분류 결과 반환
+5. Return classification result
    {
-     "is_illegal": true/false,    # 최종 판정
-     "confidence": 0.85,           # 확신도
-     "reason": "...",              # 판정 근거
-     "detected_keywords": [...]    # 탐지된 키워드
+     "is_illegal": true/false,    # Final verdict
+     "confidence": 0.85,           # Confidence score
+     "reason": "...",              # Basis for verdict
+     "detected_keywords": [...]    # Detected keywords
    }
 ```
 
-**왜 LLM을 사용하는가?**
+**Why use an LLM?**
 
-| 방식 | 장점 | 단점 |
-|------|------|------|
-| **규칙 기반** | 빠르고 명확함 | 규칙 우회 쉬움, 유지보수 어려움 |
-| **패턴 매칭** | 간단함 | 문맥 이해 불가, 오탐 많음 |
-| **LLM 기반** | 문맥 이해, 정교함, 자동 업데이트 | 비용, 지연시간, 일관성 차이 |
+| Method | Advantages | Disadvantages |
+|--------|------------|---------------|
+| **Rule-based** | Fast and clear | Rules easily bypassed, difficult to maintain |
+| **Pattern matching** | Simple | Cannot understand context, many false positives |
+| **LLM-based** | Understands context, sophisticated, auto-updated | Cost, latency, consistency variance |
 
-**LLM의 의미론적 분석 예시**:
+**Example of LLM Semantic Analysis**:
 ```
-사이트 A: "라이선스 있는 합법 온라인 카지노"
-→ "라이선스" + "정부 인증" = 합법 판단
+Site A: "Licensed legal online casino"
+→ "license" + "government certification" = classified as legal
 
-사이트 B: "스포츠 베팅, 보증금 없음, 즉시 현금화"
-→ "보증금 없음" + "즉시 현금화" = 불법 의심 판단
+Site B: "Sports betting, no deposit required, instant cashout"
+→ "no deposit" + "instant cashout" = classified as suspected illegal
 
-사이트 C: "스포츠 관련 뉴스 및 분석, 실시간 배팅 분석"
-→ 뉘앙스와 문맥으로 합법 판단
-```
-
-### 3.3 계층 간 데이터 흐름
-
-```
-키워드 입력
-  ↓ [계층 1]
-Google 검색 수행
-  ↓
-검색 결과 HTML 수집
-  ↓ [계층 2]
-URL 추출 및 정제
-  ↓
-정제된 URL 목록
-  ↓ [계층 3]
-각 URL의 HTML 수집
-  ↓
-LLM 분류 분석
-  ↓
-불법 도박 여부 판정
-  ↓ [저장소]
-결과 JSON에 저장
+Site C: "Sports news and analysis, real-time betting analysis"
+→ Classified as legal based on nuance and context
 ```
 
-### 3.4 계층 분리의 이점
+### 3.3 Data Flow Between Layers
 
-| 이점 | 설명 |
-|------|------|
-| **독립성** | 각 계층을 개별적으로 테스트, 개선, 교체 가능 |
-| **유지보수성** | 버그 수정 시 해당 계층만 수정 |
-| **확장성** | 새로운 검색 엔진, 분류기 추가 용이 |
-| **안정성** | 한 계층의 장애가 다른 계층에 영향 최소화 |
-| **재사용성** | 각 계층의 컴포넌트를 다른 프로젝트에 적용 가능 |
+```
+Keyword input
+  ↓ [Layer 1]
+Perform Google search
+  ↓
+Collect search result HTML
+  ↓ [Layer 2]
+Extract and refine URLs
+  ↓
+Refined URL list
+  ↓ [Layer 3]
+Collect HTML for each URL
+  ↓
+LLM classification analysis
+  ↓
+Determine illegality
+  ↓ [Storage]
+Save results to JSON
+```
+
+### 3.4 Benefits of Layer Separation
+
+| Benefit | Description |
+|---------|-------------|
+| **Independence** | Each layer can be individually tested, improved, and replaced |
+| **Maintainability** | Only the relevant layer needs to be modified when fixing a bug |
+| **Scalability** | Easy to add new search engines and classifiers |
+| **Stability** | Failure in one layer has minimal impact on other layers |
+| **Reusability** | Components of each layer can be applied to other projects |
 
 ---
 
-## 4. 폴백 메커니즘과 안정성 (Fallback Mechanism and Stability)
+## 4. Fallback Mechanism and Stability
 
-### 4.1 폴백 메커니즘의 원리
+### 4.1 Principles of the Fallback Mechanism
 
-본 시스템의 핵심 혁신은 **이중 계층 폴백 구조**이다. 이는 단일 방식에 의존하지 않음으로써 시스템의 견고성을 크게 향상시킨다.
+The core innovation of this system is the **dual-layer fallback structure**. By not relying on a single approach, it greatly improves the system's robustness.
 
-#### 4.1.1 폴백 흐름도
+#### 4.1.1 Fallback Flowchart
 
 ```
-검색 요청 발생
+Search request triggered
     ↓
 ┌─────────────────────────────┐
-│ 1차 시도: Selenium WebDriver │
-│ - 실제 브라우저 제어        │
-│ - JavaScript 렌더링 가능    │
+│ 1st attempt: Selenium WebDriver │
+│ - Controls a real browser       │
+│ - JavaScript rendering possible │
 └─────┬───────────────────────┘
       │
-      ├─ 성공 → HTML 반환
+      ├─ Success → Return HTML
       │
-      └─ 실패 (timeout, crash, API 오류)
+      └─ Failure (timeout, crash, API error)
            ↓
        ┌─────────────────────────────┐
-       │ 2차 시도: Requests 라이브러리│
-       │ - 경량 HTTP 요청            │
-       │ - 빠르고 가볍다            │
+       │ 2nd attempt: Requests library │
+       │ - Lightweight HTTP request    │
+       │ - Fast and lightweight        │
        └─────┬───────────────────────┘
              │
-             ├─ 성공 → HTML 반환
+             ├─ Success → Return HTML
              │
-             └─ 실패 (네트워크 오류, 403 금지)
+             └─ Failure (network error, 403 forbidden)
                   ↓
-              ┌──────────────────────┐
-              │ 3차: 로깅 및 계속 진행 │
-              │ - 이 키워드 건너뛰기 │
-              │ - 다음 키워드 시도   │
-              └──────────────────────┘
+              ┌──────────────────────────┐
+              │ 3rd: Log and continue      │
+              │ - Skip this keyword        │
+              │ - Try the next keyword     │
+              └──────────────────────────┘
 ```
 
-#### 4.1.2 폴백이 필요한 이유
+#### 4.1.2 Why the Fallback is Necessary
 
-| 상황 | Selenium 실패 원인 | Requests 폴백이 도움 되는 이유 |
-|------|----------|-----------|
-| **ChromeDriver 미설치** | Chrome 버전 불일치 | 설치 불필요 |
-| **메모리 부족** | 브라우저 인스턴스 생성 실패 | 매우 가벼움 |
-| **Headless 모드 미지원** | WSL/Docker 환경 | GUI 필요 없음 |
-| **시간 초과** | JavaScript 로딩 지연 | 즉각적 응답 |
-| **봇 탐지** | Webdriver 속성 감지 | 실제 브라우저처럼 보임 |
+| Situation | Selenium Failure Cause | Why Requests Fallback Helps |
+|-----------|------------------------|-----------------------------|
+| **ChromeDriver not installed** | Chrome version mismatch | No installation needed |
+| **Insufficient memory** | Browser instance creation failure | Very lightweight |
+| **Headless mode unsupported** | WSL/Docker environment | No GUI required |
+| **Timeout** | JavaScript loading delay | Immediate response |
+| **Bot detection** | Webdriver attribute detected | Appears like a real browser |
 
-### 4.2 각 방식의 장단점 비교
+### 4.2 Comparison of Approaches
 
-#### **Selenium의 특성**
+#### **Characteristics of Selenium**
 
-**장점**:
-- JavaScript 렌더링 → 동적 콘텐츠 수집 가능
-- 실제 사용자 행동 시뮬레이션
-- 클릭, 스크롤 등 복잡한 상호작용 가능
+**Advantages**:
+- JavaScript rendering → can collect dynamic content
+- Simulates real user behavior
+- Supports complex interactions such as clicking and scrolling
 
-**단점**:
-- 무거운 리소스 사용 (메모리 500MB+)
-- 설정과 의존성 복잡
-- 느린 성능 (요청당 5~10초)
-- ChromeDriver 관리 필요
+**Disadvantages**:
+- Heavy resource usage (500MB+ memory)
+- Complex configuration and dependencies
+- Slow performance (5–10 seconds per request)
+- ChromeDriver management required
 
-#### **Requests의 특성**
+#### **Characteristics of Requests**
 
-**장점**:
-- 매우 가볍고 빠름 (요청당 1~2초)
-- 설정 간단
-- 안정적인 HTTP 통신
+**Advantages**:
+- Very lightweight and fast (1–2 seconds per request)
+- Simple configuration
+- Stable HTTP communication
 
-**단점**:
-- JavaScript 미실행 → 동적 콘텐츠 수집 불가
-- 상대적으로 쉽게 봇 탐지됨
+**Disadvantages**:
+- No JavaScript execution → cannot collect dynamic content
+- Relatively easier to detect as a bot
 
-#### **폴백 전략의 우수성**
+#### **Superiority of the Fallback Strategy**
 
 ```
-전략            평균 성공률  평균 속도   리소스
-─────────────────────────────────────────
-Selenium만      85%        중간-느림   높음
-Requests만      70%        빠름       낮음
-폴백 구조       >95%       중간       적응형
-                (1차+2차)
+Strategy           Avg. Success Rate  Avg. Speed      Resources
+─────────────────────────────────────────────────────
+Selenium only      85%               Medium-Slow     High
+Requests only      70%               Fast            Low
+Fallback structure >95%              Medium          Adaptive
+                   (1st + 2nd)
 ```
 
-### 4.3 자동화 탐지 회피 원리
+### 4.3 Principles of Automation Detection Evasion
 
-현대 웹사이트는 다음과 같은 방법으로 자동화를 감지한다:
+Modern websites detect automation using the following methods:
 
-#### **탐지 기법 1: Webdriver 속성 확인**
+#### **Detection Technique 1: Webdriver Attribute Check**
 
 ```javascript
-// 서버가 이렇게 점검함
+// Server checks like this
 if (navigator.webdriver === true) {
-    // 이것은 자동화된 봇입니다!
+    // This is an automated bot!
     reject_request();
 }
 ```
 
-**우회 방법**:
+**Evasion method**:
 ```python
-# Selenium에서 다음을 실행
+# Execute the following in Selenium
 driver.execute_script(
     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
 )
 ```
 
-**원리**: JavaScript를 먼저 실행하여 webdriver 속성을 정의 전에 제거
+**Principle**: Execute JavaScript first to remove the webdriver attribute before it is defined
 
-#### **탐지 기법 2: User-Agent 문자열**
+#### **Detection Technique 2: User-Agent String**
 
 ```
-정상 사용자: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0
-봇:         webdriver/4.0, headless=true 포함
+Normal user: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0
+Bot:         Contains webdriver/4.0, headless=true
 ```
 
-**우회 방법**:
+**Evasion method**:
 ```python
-# 실제 브라우저 User-Agent로 변조
+# Spoof with a real browser User-Agent
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0.0.0"
@@ -418,37 +418,37 @@ user_agents = [
 chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
 ```
 
-#### **탐지 기법 3: 요청 패턴**
+#### **Detection Technique 3: Request Patterns**
 
 ```
-비정상 패턴: 요청 → 요청 → 요청 (0.1초 간격)
-정상 패턴:   요청 → (지연) → 요청 → (지연) → 요청
+Abnormal pattern: request → request → request (0.1-second intervals)
+Normal pattern:   request → (delay) → request → (delay) → request
 ```
 
-**우회 방법**:
+**Evasion method**:
 ```python
-# 각 요청 간에 무작위 지연 추가
+# Add random delay between each request
 random_delay = random.uniform(2, 4)
 time.sleep(random_delay)
 ```
 
-**원리**: 인간의 행동은 무작위이므로, 패턴 기반 탐지 우회
+**Principle**: Human behavior is random, so this bypasses pattern-based detection
 
-### 4.4 데이터 중복 제거 메커니즘
+### 4.4 Data Deduplication Mechanism
 
-#### **문제점**
+#### **The Problem**
 
-- 같은 키워드로 여러 번 검색하면 중복 URL 발생
-- 다른 키워드로 검색해도 겹치는 URL 존재
-- 중복을 제거하지 않으면 데이터 오염 발생
+- Searching with the same keyword multiple times generates duplicate URLs
+- Different keywords can also produce overlapping URLs
+- Without deduplication, data contamination occurs
 
-#### **해결책: Set 자료구조**
+#### **Solution: Set Data Structure**
 
 ```
-입력 URL 목록:
+Input URL list:
 ["A.com", "B.com", "A.com", "C.com", "B.com"]
 
-        ↓ [Set 변환]
+        ↓ [Convert to Set]
 
 {
   "A.com",
@@ -456,311 +456,311 @@ time.sleep(random_delay)
   "C.com"
 }
 
-출력: ["A.com", "B.com", "C.com"]
+Output: ["A.com", "B.com", "C.com"]
 ```
 
-**시간 복잡도**:
-- Set 추가: O(1)
-- 전체 처리: O(n)
-- 다른 중복 제거 방식보다 매우 효율적
+**Time Complexity**:
+- Set insertion: O(1)
+- Full processing: O(n)
+- Much more efficient than other deduplication approaches
 
-#### **메타데이터를 통한 추적**
+#### **Tracking via Metadata**
 
 ```json
 {
   "url": "https://example.com",
-  "keyword_used": "스포츠 배팅 신규",  // 어느 키워드로 찾았나?
-  "collected_at": "2024-11-22T14:30:00Z",  // 언제?
-  "source_rank": 3  // 검색 결과 몇 번째?
+  "keyword_used": "sports betting new",  // Which keyword found it?
+  "collected_at": "2024-11-22T14:30:00Z",  // When?
+  "source_rank": 3  // What rank in the search results?
 }
 ```
 
-**의의**: 같은 URL이라도 어느 키워드로 찾았는지 추적 가능
+**Significance**: Even for the same URL, it is possible to track which keyword found it
 
-### 4.5 LLM 분류의 작동 원리
+### 4.5 Operating Principles of LLM Classification
 
-#### **의미론적 분석이란?**
+#### **What is Semantic Analysis?**
 
-규칙 기반 분류:
+Rule-based classification:
 ```
-if "베팅" in text and "불법" in text:
-    return "불법"
-```
-
-의미론적 분류 (LLM):
-```
-"스포츠 베팅의 역사와 규제"
-→ "베팅" 단어 있지만 문맥은 교육적
-→ LLM: "합법"
-
-"365일 24시간 베팅, 본인 확인 필수 아님"
-→ "베팅" 단어 + 의심스러운 문맥
-→ LLM: "불법"
+if "betting" in text and "illegal" in text:
+    return "illegal"
 ```
 
-#### **LLM이 이해하는 패턴**
+Semantic classification (LLM):
+```
+"History and regulation of sports betting"
+→ Contains the word "betting" but the context is educational
+→ LLM: "legal"
 
-1. **도메인 언어**: 도박 사이트만의 특정 표현
-   - "보증금 없음" → 불법의 신호
-   - "정부 라이선스" → 합법의 신호
+"Betting 365 days 24 hours, no identity verification required"
+→ "betting" + suspicious context
+→ LLM: "illegal"
+```
 
-2. **암묵적 의도**: 명시적이지 않은 의도 파악
-   - "빠른 현금화" + "즉시 배팅" → 도박 목적 유추
+#### **Patterns Understood by the LLM**
 
-3. **다국어 뉘앙스**: 단순 키워드 매칭으로 놓칠 수 있는 부분
-   - "카지노 게임 공략법" vs "카지노에서 돈 버는 방법"
+1. **Domain-specific language**: Expressions unique to gambling sites
+   - "No deposit" → signal of illegal activity
+   - "Government license" → signal of legality
+
+2. **Implicit intent**: Understanding intent that is not explicitly stated
+   - "Fast cashout" + "instant betting" → infer gambling purpose
+
+3. **Multilingual nuance**: Parts that simple keyword matching might miss
+   - "Casino game strategy guide" vs. "How to make money at a casino"
 
 ---
 
-## 5. 시스템의 구조적 이점 (Structural Advantages)
+## 5. Structural Advantages of the System
 
-### 5.1 계층 분리의 실제 이점
+### 5.1 Practical Benefits of Layer Separation
 
-#### **이점 1: 각 계층의 독립적 개선**
+#### **Benefit 1: Independent Improvement of Each Layer**
 
-현재 시스템:
+Current system:
 ```
-[검색] → [추출] → [분류] → [저장]
-```
-
-만약 "검색 정확도 개선"이 필요하다면?
-- 다른 계층을 건드리지 않고 검색 계층만 수정
-- 기존 테스트 케이스 재사용 가능
-- 다른 기능에 부작용 없음
-
-**예시**:
-```
-개선 전: Google 검색만 지원
-개선 후: Google + Naver + Bing 검색 지원
-→ 다른 계층은 같은 URL을 받기만 하므로 무관
+[Search] → [Extraction] → [Classification] → [Storage]
 ```
 
-#### **이점 2: 컴포넌트 재사용**
+If "improving search accuracy" is needed:
+- Modify only the search layer without touching other layers
+- Existing test cases can be reused
+- No side effects on other functionality
 
+**Example**:
 ```
-프로젝트 A: 불법 도박 탐지
-└─ [검색] → [추출] → [분류 (Gemini)] → [저장]
-
-프로젝트 B: 피싱 사이트 탐지
-└─ [검색] → [추출] → [분류 (Custom Model)] → [저장]
-
-프로젝트 C: 가짜 쇼핑몰 탐지
-└─ [검색] → [추출] → [분류 (VirusTotal API)] → [저장]
-
-→ 검색과 추출 계층은 세 프로젝트 모두에서 사용 가능!
+Before improvement: Only Google search supported
+After improvement:  Google + Naver + Bing search supported
+→ Other layers only receive the same URLs, so they are unaffected
 ```
 
-### 5.2 폴백 메커니즘의 실제 가치
-
-#### **시나리오 1: 일반 환경 (Windows/Mac)**
+#### **Benefit 2: Component Reuse**
 
 ```
-정상 작동:
-Selenium 검색 → 성공 → 처리 완료
-평균 실행 시간: 5초/키워드
+Project A: Illegal gambling detection
+└─ [Search] → [Extraction] → [Classification (Gemini)] → [Storage]
+
+Project B: Phishing site detection
+└─ [Search] → [Extraction] → [Classification (Custom Model)] → [Storage]
+
+Project C: Fake shopping mall detection
+└─ [Search] → [Extraction] → [Classification (VirusTotal API)] → [Storage]
+
+→ The search and extraction layers can be used across all three projects!
 ```
 
-#### **시나리오 2: ChromeDriver 미설치**
+### 5.2 Practical Value of the Fallback Mechanism
+
+#### **Scenario 1: Normal Environment (Windows/Mac)**
 
 ```
-Selenium 시도 → 실패 (Missing ChromeDriver)
-Requests 폴백 → 성공 → 처리 완료
-평균 실행 시간: 2초/키워드
-손실된 기능: 동적 콘텐츠 수집 (일부 사이트)
-성공률: 폴백 없음: 0%, 폴백 있음: 70%+
+Normal operation:
+Selenium search → Success → Processing complete
+Average execution time: 5 seconds/keyword
 ```
 
-#### **시나리오 3: 메모리 부족 (제한된 리소스)**
+#### **Scenario 2: ChromeDriver Not Installed**
 
 ```
-Selenium 시도 → 실패 (Out of Memory)
-Requests 폴백 → 성공 → 처리 완료
-리소스 사용량: 50MB (vs Selenium의 500MB)
-시스템 영향: 미미
+Selenium attempt → Failure (Missing ChromeDriver)
+Requests fallback → Success → Processing complete
+Average execution time: 2 seconds/keyword
+Lost functionality: Dynamic content collection (some sites)
+Success rate: Without fallback: 0%, With fallback: 70%+
 ```
 
-#### **시나리오 4: WSL/Docker 환경**
+#### **Scenario 3: Insufficient Memory (Limited Resources)**
 
 ```
-Selenium 시도 → 실패 (No GUI)
-Requests 폴백 → 성공 → 처리 완료
-설정 복잡도: 약간의 User-Agent 설정만으로 충분
+Selenium attempt → Failure (Out of Memory)
+Requests fallback → Success → Processing complete
+Resource usage: 50MB (vs. Selenium's 500MB)
+System impact: Minimal
 ```
 
-### 5.3 의미론적 분류의 강점
+#### **Scenario 4: WSL/Docker Environment**
 
-#### **기존 규칙 기반의 한계**
+```
+Selenium attempt → Failure (No GUI)
+Requests fallback → Success → Processing complete
+Configuration complexity: Only minor User-Agent configuration needed
+```
+
+### 5.3 Strengths of Semantic Classification
+
+#### **Limitations of Existing Rule-Based Approaches**
 
 ```python
-# 규칙 기반 탐지
+# Rule-based detection
 rules = {
-    "불법": ["도박", "베팅", "카지노"],
-    "합법": ["라이선스", "정부 인증"]
+    "illegal": ["gambling", "betting", "casino"],
+    "legal": ["license", "government certification"]
 }
 
-# 사이트를 분석하면...
-text = "정부 라이선스를 받은 카지노입니다"
-# "카지노" 매칭 → 불법 판정 (오류!)
+# Analyzing a site...
+text = "This is a casino with a government license"
+# "casino" matched → classified as illegal (error!)
 ```
 
-#### **LLM 기반의 우수성**
+#### **Superiority of LLM-Based Approaches**
 
 ```python
-# LLM 기반 탐지
-text = "정부 라이선스를 받은 카지노입니다"
+# LLM-based detection
+text = "This is a casino with a government license"
 
-# LLM의 분석:
-# 1. "라이선스" + "정부" = 합법 신호
-# 2. "받은" = 과거 완료, 현재 보유 의미
-# 3. 문맥상 합법 카지노 소개
-# → 합법 판정 (정확!)
+# LLM analysis:
+# 1. "license" + "government" = legal signal
+# 2. "with" = present possession implied
+# 3. Contextually introduces a legal casino
+# → Classified as legal (correct!)
 ```
 
-#### **거짓 양성/음성 비율**
+#### **False Positive/Negative Rates**
 
-| 시나리오 | 규칙 기반 | LLM 기반 |
-|---------|----------|---------|
-| "라이선스 카지노" | 거짓 양성 (오탐) | 정확 분류 |
-| "보증금 없음, 빠른 출금" | 정확 분류 | 정확 분류 |
-| "도박 관련 뉴스" | 거짓 양성 (오탐) | 정확 분류 |
-| "게임 한판 vs 베팅" | 거짓 음성 (미탐) | 정확 분류 |
+| Scenario | Rule-Based | LLM-Based |
+|----------|------------|-----------|
+| "Licensed casino" | False positive (misclassified) | Correctly classified |
+| "No deposit, fast withdrawal" | Correctly classified | Correctly classified |
+| "News about gambling" | False positive (misclassified) | Correctly classified |
+| "One game vs. betting" | False negative (missed) | Correctly classified |
 
-### 5.4 데이터 추적성의 중요성
+### 5.4 Importance of Data Traceability
 
-#### **문제: 단순 URL 목록의 한계**
+#### **Problem: Limitations of a Simple URL List**
 
 ```json
 ["site1.com", "site2.com", "site3.com"]
 ```
 
-**질문에 답할 수 없음:**
-- 어느 키워드로 이 사이트를 찾았나?
-- 검색 결과 몇 위에 나왔나?
-- 언제 수집했나?
-- 여러 키워드에서 중복으로 나타났나?
+**Unable to answer:**
+- Which keyword found this site?
+- What rank did it appear at in the search results?
+- When was it collected?
+- Did it appear repeatedly across multiple keywords?
 
-#### **해결: 메타데이터 포함**
+#### **Solution: Include Metadata**
 
 ```json
 {
   "url": "site1.com",
-  "keyword_used": "스포츠 배팅",
+  "keyword_used": "sports betting",
   "source_rank": 3,
   "collected_at": "2024-11-22T14:30:00Z"
 }
 ```
 
-**이제 답할 수 있는 질문:**
-- "스포츠 배팅 검색에서 가장 자주 나오는 사이트는?" → 소스 랭크 분석
-- "이 사이트가 어느 키워드와 연관되나?" → 메타데이터 추적
-- "지난주 대비 수집 사이트 변화는?" → 타임스탐프 분석
+**Questions now answerable:**
+- "What site appears most often in 'sports betting' searches?" → Source rank analysis
+- "Which keywords are associated with this site?" → Metadata tracking
+- "How did collected sites change compared to last week?" → Timestamp analysis
 
 ---
 
-## 6. 결론 및 학술적 의의 (Conclusion and Academic Significance)
+## 6. Conclusion and Academic Significance
 
-### 6.1 시스템의 핵심 특징 요약
+### 6.1 Summary of Key System Characteristics
 
-본 보고서에서 제시한 시스템은 다음과 같은 특징을 가진다:
+The system presented in this report has the following characteristics:
 
-| 특징 | 의의 |
-|------|------|
-| **삼계층 아키텍처** | 각 단계가 명확히 분리되어 유지보수 용이 |
-| **이중 폴백 메커니즘** | Selenium → Requests 자동 전환으로 견고성 확보 |
-| **의미론적 분류** | LLM을 통한 정교한 탐지로 오탐 최소화 |
-| **메타데이터 추적** | 수집 경로와 시간을 기록하여 추적성 확보 |
-| **모듈식 설계** | 각 컴포넌트의 독립적 개선 및 재사용 가능 |
+| Characteristic | Significance |
+|----------------|-------------|
+| **Three-tier architecture** | Each stage is clearly separated, making maintenance easy |
+| **Dual fallback mechanism** | Robustness secured through automatic Selenium → Requests switching |
+| **Semantic classification** | Sophisticated detection via LLM minimizes false positives |
+| **Metadata tracking** | Traceability secured by recording collection path and time |
+| **Modular design** | Each component can be independently improved and reused |
 
-### 6.2 학술적 기여
+### 6.2 Academic Contributions
 
-#### **기여 1: 웹 크롤링의 견고성 설계**
+#### **Contribution 1: Robustness Design in Web Crawling**
 
-본 시스템이 제시하는 이중 폴백 메커니즘은 웹 크롤링 분야에서 다음을 시사한다:
+The dual fallback mechanism presented by this system suggests the following in the field of web crawling:
 
-- **단일 기술에 의존하지 않기**: Selenium만 사용하면 장애 시 전체 실패
-- **폴백 계층 구성의 효율성**: Selenium (강력하지만 무거움) + Requests (가볍지만 제한적)
-- **부분 실패의 수용**: "모든 데이터를 얻기" → "가능한 많은 데이터를 얻기"로 패러다임 전환
+- **Avoid relying on a single technology**: Using only Selenium causes total failure when it breaks down
+- **Efficiency of layered fallback**: Selenium (powerful but heavy) + Requests (lightweight but limited)
+- **Accepting partial failure**: A paradigm shift from "get all data" to "get as much data as possible"
 
-#### **기여 2: 자동화 탐지 우회의 지속성**
+#### **Contribution 2: Persistence Against Automation Detection**
 
-본 시스템의 자동화 회피 기법들은:
+The automation evasion techniques in this system:
 
-- **표면적 대증 치료가 아닌 구조적 접근**: User-Agent 변조만 아닌, 요청 패턴까지 고려
-- **진화하는 탐지 기술에 대한 적응성**: 폴백 메커니즘으로 특정 기술 의존성 회피
-- **규제와 기술의 균형**: 자동화를 회피하되, 불법 활동은 탐지
+- **Structural approach rather than symptomatic treatment**: Considers not only User-Agent spoofing but also request patterns
+- **Adaptability to evolving detection technologies**: Avoids dependence on specific technologies via the fallback mechanism
+- **Balance between regulation and technology**: Evades automation while detecting illegal activity
 
-#### **기여 3: LLM 기반 분류의 실제 가치**
+#### **Contribution 3: Practical Value of LLM-Based Classification**
 
-의미론적 분석을 통한 분류는:
+Classification through semantic analysis:
 
-- **도메인 전문성의 민주화**: 규칙을 일일이 작성할 필요 없이 LLM이 학습
-- **거짓 양성/음성의 감소**: 패턴 매칭의 한계 극복
-- **자동 업데이트의 가능성**: 새로운 불법 수법이 나와도 LLM은 자동으로 학습
+- **Democratization of domain expertise**: LLM learns without needing to write rules one by one
+- **Reduction of false positives/negatives**: Overcomes the limitations of pattern matching
+- **Potential for automatic updates**: Even as new illegal methods emerge, the LLM learns automatically
 
-### 6.3 실제 적용 사례
+### 6.3 Practical Application Cases
 
-#### **사례 1: 온라인 규제 기관**
+#### **Case 1: Online Regulatory Agency**
 ```
-적용: 월 1000개의 신고 사이트를 자동으로 분류
-효과: 수동 분석 시간 80% 단축
-가치: 인력 자원을 전략적 판단에 집중
-```
-
-#### **사례 2: 금융 기관 컴플라이언스 팀**
-```
-적용: 고객이 제보한 의심 사이트를 자동으로 검증
-효과: 거짓 신고와 진짜 위협 구분 가능
-가치: 대응 우선순위 결정에 데이터 기반 접근
+Application: Automatically classify 1,000 reported sites per month
+Effect: 80% reduction in manual analysis time
+Value: Focus human resources on strategic judgment
 ```
 
-#### **사례 3: 학술 연구**
+#### **Case 2: Financial Institution Compliance Team**
 ```
-적용: 불법 도박 사이트의 진화 추적
-효과: 시계열 데이터로 새로운 수법 패턴 분석
-가치: 정책 결정과 규제 방향 제시
+Application: Automatically verify suspicious sites reported by customers
+Effect: Ability to distinguish false reports from real threats
+Value: Data-driven approach to determining response priorities
 ```
 
-### 6.4 한계와 향후 과제
+#### **Case 3: Academic Research**
+```
+Application: Track the evolution of illegal gambling sites
+Effect: Analyze new method patterns using time-series data
+Value: Guide policy decisions and regulatory direction
+```
 
-#### **현재 한계**
+### 6.4 Limitations and Future Work
 
-1. **동적 렌더링의 불완전성**
-   - 일부 SPA(Single Page Application)는 완전히 렌더링되지 않을 수 있음
-   - 해결책: Playwright 또는 Puppeteer 등 다른 자동화 도구 추가
+#### **Current Limitations**
 
-2. **LLM의 비용과 지연**
-   - 대량의 URL 분류 시 API 비용 증가
-   - 응답 시간이 5~10초로 느려질 수 있음
-   - 해결책: 로컬 경량 모델(DistilBERT) + LLM 앙상블
+1. **Incomplete Dynamic Rendering**
+   - Some SPAs (Single Page Applications) may not render completely
+   - Solution: Add other automation tools such as Playwright or Puppeteer
 
-3. **다국어 처리의 미흡**
-   - 현재 한국어 최적화 (영어, 일본어 등 추가 필요)
-   - 해결책: 다국어 LLM (mBERT, XLM-RoBERTa) 활용
+2. **LLM Cost and Latency**
+   - API costs increase when classifying large numbers of URLs
+   - Response time can slow to 5–10 seconds
+   - Solution: Local lightweight model (DistilBERT) + LLM ensemble
 
-#### **향후 개선 방향**
+3. **Insufficient Multilingual Processing**
+   - Currently optimized for Korean (English, Japanese, etc. need to be added)
+   - Solution: Use multilingual LLMs (mBERT, XLM-RoBERTa)
 
-| 단계 | 개선 항목 | 기대 효과 |
-|------|---------|---------|
-| **단기** (3개월) | 병렬 처리 (asyncio) | 처리 속도 3배 향상 |
-| | 로컬 모델 도입 | API 비용 90% 절감 |
-| **중기** (6개월) | 데이터베이스 연동 | 대규모 데이터 관리 |
-| | 웹 대시보드 구축 | 시각화 및 모니터링 |
-| **장기** (12개월) | 머신러닝 파이프라인 | 커스텀 모델 학습 |
-| | REST API 제공 | 제3자 통합 지원 |
+#### **Future Improvement Directions**
 
-### 6.5 결론
+| Phase | Improvement Item | Expected Effect |
+|-------|-----------------|-----------------|
+| **Short-term** (3 months) | Parallel processing (asyncio) | 3x improvement in processing speed |
+| | Introduce local models | 90% reduction in API costs |
+| **Mid-term** (6 months) | Database integration | Large-scale data management |
+| | Build web dashboard | Visualization and monitoring |
+| **Long-term** (12 months) | Machine learning pipeline | Custom model training |
+| | Provide REST API | Support third-party integration |
 
-본 보고서는 단순한 "코드 구현 문서"가 아닌, **웹 크롤링과 AI 분류 시스템의 설계 원리**를 다룬다.
+### 6.5 Conclusion
 
-**핵심 메시지:**
+This report is not merely a "code implementation document" but addresses the **design principles of web crawling and AI classification systems**.
 
-> *"견고한 시스템은 단일 기술에 의존하지 않고, 부분 실패를 수용하며, 계층을 명확히 분리하고, 최종 사용자의 의도를 최우선으로 설계된다."*
+**Core Message:**
 
-본 시스템은 이러한 원리를 실제 불법 도박 사이트 탐지에 적용한 예시이며, 동일한 설계 패턴은 다양한 도메인에 확대 적용될 수 있다.
+> *"A robust system does not rely on a single technology, accepts partial failures, clearly separates layers, and is designed with the end user's intent as the top priority."*
+
+This system is an example of applying these principles to real-world illegal gambling site detection, and the same design patterns can be extended to a wide range of domains.
 
 ---
 
-## 참고문헌 (References)
+## References
 
 [1] Sleepwalk, S., et al. (2021). "Web Scraping in an Era of Automation: Tools, Techniques, and Challenges." *Journal of Web Engineering*, 20(3), 234-256.
 
@@ -780,13 +780,12 @@ text = "정부 라이선스를 받은 카지노입니다"
 
 ---
 
-**문서 정보**
+**Document Information**
 
-| 항목 | 내용 |
-|------|------|
-| 제목 | 인공지능 기반 불법 도박 사이트 탐지 시스템의 구조와 원리 |
-| 작성 날짜 | 2024-11-22 |
-| 버전 | 2.0 (원리 및 구조 중심 개정판) |
-| 상태 | 최종 |
-| 주요 초점 | 시스템 아키텍처, 설계 원리, 학술적 의의 |
-
+| Field | Details |
+|-------|---------|
+| Title | Structure and Principles of an AI-Based Illegal Gambling Site Detection System |
+| Date Written | 2024-11-22 |
+| Version | 2.0 (Revised edition focused on principles and structure) |
+| Status | Final |
+| Primary Focus | System architecture, design principles, academic significance |

@@ -16,18 +16,18 @@ class URLExtractor:
         soup = BeautifulSoup(html_content, 'html.parser')
         urls = set()
 
-        # 구글 검색 결과의 메인 영역(id="rso")만 추출
+        # Extract from the main search results area (id="rso") only
         rso_element = soup.find(id='rso')
-        
-        # rso 영역이 없으면 전체 페이지에서 추출 (fallback)
+
+        # Fall back to full page if rso area is not found
         search_area = rso_element if rso_element else soup
-        
+
         for link in search_area.find_all('a', href=True):
             url = link['href']
-            
-            # 구글 리다이렉트 URL에서 실제 URL 추출
+
+            # Unwrap Google redirect URLs to get the actual destination
             url = self._extract_real_url_from_google(url)
-            
+
             if self._is_valid_url(url):
                 if self.remove_tracking_params:
                     url = self._clean_tracking_params(url)
@@ -36,7 +36,7 @@ class URLExtractor:
         return list(urls)
 
     def _extract_real_url_from_google(self, url: str) -> str:
-        """구글 리다이렉트 URL에서 실제 URL 추출 (예: /url?q=실제URL&...)"""
+        """Extracts the real URL from a Google redirect (e.g. /url?q=<real_url>&...)."""
         if url.startswith('/url'):
             try:
                 parsed = urlparse(url)

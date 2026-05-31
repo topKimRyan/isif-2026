@@ -3,14 +3,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reportId = params.get('id') || sessionStorage.getItem('report_id');
 
     if (!reportId) {
-        alert('정보가 없습니다. 메인 페이지로 돌아갑니다.');
+        alert('No report information found. Redirecting to the main page.');
         sessionStorage.removeItem('report_id'); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
     }
-    
+
     if (!supabaseClient) {
-        alert('데이터베이스 연결에 실패했습니다.');
+        alert('Failed to connect to the database.');
         sessionStorage.removeItem('report_id'); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 newKeywordInput.value = '';
                 renderKeywords();
             } else if (currentKeywords.includes(newKeyword)) {
-                alert('이미 존재하는 키워드입니다.');
+                alert('This keyword already exists.');
             }
         });
 
@@ -85,9 +85,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         detected_keywords: currentKeywords
                     })
                     .eq('id', reportId);
-                
+
                 if (error) throw error;
-                
+
                 // Redirect back to confirm page
                 window.location.href = `report-confirm.html?id=${reportId}`;
             } catch (e) {

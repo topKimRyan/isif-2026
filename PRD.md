@@ -31,7 +31,7 @@ The system:
 ### ✔ 3.1 Keyword List Loading
 - Load keywords from `keywords.json`
 - Support single keywords and multi-word keyword phrases
-- Example: `["스포츠 배팅 신규"]`
+- Example: `["sports betting new"]`
 
 ### ✔ 3.2 Search Engine Automation
 - Support **Google** as primary search engine
@@ -188,7 +188,7 @@ illicit-gambling-detector/
   "results": [
     {
       "url": "https://example-gambling.com",
-      "keyword_used": "스포츠 배팅 신규",
+      "keyword_used": "sports betting new",
       "collected_at": "2024-11-22T14:30:00Z",
       "source_rank": 1,
       "classification": {
@@ -200,7 +200,7 @@ illicit-gambling-detector/
     },
     {
       "url": "https://another-site.com",
-      "keyword_used": "스포츠 배팅 신규",
+      "keyword_used": "sports betting new",
       "collected_at": "2024-11-22T14:30:15Z",
       "source_rank": 2,
       "classification": {

@@ -64,7 +64,7 @@ async def upsert_illegal_site(supabase: Client, report: dict):
 async def log_final_report(supabase: Client, report: dict):
     """
     Always inserts a new record into the 'gambling_urls' table for every final, reported data.
-    The 'keyword_used' is manually set to '수동 신고'.
+    The 'keyword_used' is manually set to 'manual report'.
     """
     report_id = report.get('id')
     report_url = report.get('url')
@@ -90,7 +90,7 @@ async def log_final_report(supabase: Client, report: dict):
             'gemini_reason': reason,
             'gemini_error': gemini_error,
             'detected_keywords': detected_keywords,  # Use actual detected_keywords
-            'keyword_used': '수동 신고', # Add non-null value for keyword_used
+            'keyword_used': 'manual report', # Add non-null value for keyword_used
             'screenshot_url': screenshot_url,
             'collected_at': datetime.now(KST).isoformat(),
         }

@@ -1,5 +1,5 @@
-gambling_urls 테이블 구성
-id (int4) <- 숫자가 있으며 1부터 시작한다. 이미 등록된 데이터가 있을 수 있으며 그 경우 그 다음 번호부터 시작한다.
+gambling_urls table schema
+id (int4) <- numeric, starts from 1. There may already be existing data, in which case it continues from the next available number.
 url (text)
 keyword (text)
 collected_at (timestamp)
@@ -12,6 +12,5 @@ created_at (timestamp)
 updated_at (timestamp)
 screenshot_url (text)
 
-error 메시지
-Error inserting into 'gambling_urls' table: {'message': 'null value in column "keyword_used" of relation "gambling_urls" violates not-null constraint', 'code': '23502', 'hint': None, 'details': 'Failing row contains (39, https://www.pokerscout.com/kr/casino/casino-game-sites/, null, 2026-01-04 06:21:38.495367, t, 0.95, (수동 신고 테스트) 이 웹
-사이트는 온라인 카지..., null, ["수동 신고"], 2026-01-04 06:21:38.495367, 2026-01-04 06:21:38.495367, https://ezpnbmglzbxujveexmvm.supabase.co/storage/v1/object/publi...).'}
+error message
+Error inserting into 'gambling_urls' table: {'message': 'null value in column "keyword_used" of relation "gambling_urls" violates not-null constraint', 'code': '23502', 'hint': None, 'details': 'Failing row contains (39, https://www.pokerscout.com/kr/casino/casino-game-sites/, null, 2026-01-04 06:21:38.495367, t, 0.95, (manual report test) This website is an online casi..., null, ["manual report"], 2026-01-04 06:21:38.495367, 2026-01-04 06:21:38.495367, https://ezpnbmglzbxujveexmvm.supabase.co/storage/v1/object/publi...).'}

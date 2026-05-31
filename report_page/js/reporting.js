@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportId = params.get('id') || sessionStorage.getItem('report_id');
 
     if (!reportId) {
-        alert('신고 ID가 없습니다. 메인 페이지로 돌아갑니다.');
+        alert('No report ID found. Redirecting to the main page.');
         sessionStorage.removeItem('report_id'); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // For now, we just navigate away. A real implementation might need to
         // signal the backend to halt the reporting process if possible.
         cancelButton.addEventListener('click', () => {
-            alert('신고 진행이 취소되었습니다.');
+            alert('Report submission has been cancelled.');
             sessionStorage.removeItem('report_id');
             window.location.href = 'index.html';
             // Note: We are not setting status to 'cancel' here as the backend
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!supabaseClient) {
-        alert('데이터베이스 연결에 실패했습니다.');
+        alert('Failed to connect to the database.');
         sessionStorage.removeItem('report_id'); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeout = setTimeout(() => {
         supabaseClient.removeChannel(subscription);
         if (window.location.pathname.includes('reporting.html')) {
-            console.warn('신고 처리가 지연되고 있습니다.');
+            console.warn('Report submission is taking longer than expected.');
             sessionStorage.removeItem('report_id'); // Clear session storage
             window.location.href = 'report-error.html'; // Redirect to error page on timeout
         }

@@ -1,4 +1,4 @@
-/* 전역 스타일 */
+/* Global styles */
 * {
     margin: 0;
     padding: 0;
@@ -18,7 +18,7 @@ body {
     padding: 20px;
 }
 
-/* 헤더 */
+/* Header */
 header {
     text-align: center;
     margin-bottom: 30px;
@@ -39,7 +39,7 @@ header p {
     font-size: 14px;
 }
 
-/* 통계 섹션 */
+/* Statistics section */
 .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -67,7 +67,7 @@ header p {
     color: #d32f2f;
 }
 
-/* 검색 섹션 */
+/* Search section */
 .search-section {
     display: flex;
     gap: 10px;
@@ -102,7 +102,7 @@ header p {
     background-color: #b71c1c;
 }
 
-/* 로딩 및 에러 */
+/* Loading & error */
 .loading {
     text-align: center;
     padding: 40px;
@@ -120,7 +120,7 @@ header p {
     border-left: 4px solid #c62828;
 }
 
-/* 테이블 */
+/* Table */
 .table-container {
     background: white;
     border-radius: 8px;
@@ -160,14 +160,14 @@ td {
     font-size: 14px;
 }
 
-/* 파비콘 */
+/* Favicon */
 .favicon {
     width: 24px;
     height: 24px;
     border-radius: 4px;
 }
 
-/* URL 링크 */
+/* URL link */
 .url-link {
     color: #1976d2;
     text-decoration: none;
@@ -178,7 +178,7 @@ td {
     text-decoration: underline;
 }
 
-/* 신뢰도 배지 */
+/* Confidence badge */
 .confidence-badge {
     display: inline-block;
     padding: 6px 12px;
@@ -202,7 +202,7 @@ td {
     color: #f57f17;
 }
 
-/* 상세보기 버튼 */
+/* Details button */
 .detail-btn {
     padding: 8px 16px;
     background-color: #1976d2;
@@ -217,13 +217,13 @@ td {
     background-color: #1565c0;
 }
 
-/* 날짜 표시 */
+/* Date display */
 .date-text {
     color: #666;
     font-size: 13px;
 }
 
-/* 모달 */
+/* Modal */
 .modal {
     position: fixed;
     z-index: 1000;
@@ -292,43 +292,42 @@ td {
     font-size: 13px;
 }
 
-/* 스크린샷 이미지 */
+/* Screenshot image */
 .screenshot-img {
     max-width: 100%;
     border-radius: 4px;
     border: 1px solid #ddd;
 }
 
-/* 반응형 디자인 */
+/* Responsive design */
 @media (max-width: 768px) {
     .container {
         padding: 10px;
     }
-    
+
     header h1 {
         font-size: 22px;
     }
-    
+
     .stats-section {
         grid-template-columns: 1fr;
     }
-    
+
     .search-section {
         flex-direction: column;
     }
-    
+
     table {
         font-size: 12px;
     }
-    
+
     th, td {
         padding: 10px;
     }
-    
+
     .modal-content {
         margin: 10% auto;
         padding: 20px;
         width: 95%;
     }
 }
-

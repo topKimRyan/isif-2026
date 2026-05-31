@@ -1,150 +1,150 @@
-# 불법 도박 사이트 탐지 시스템 아키텍처 문서
+# Illegal Gambling Site Detection System Architecture Document
 
-> **소셜임팩트 중심 대회 출품용 종합 기술 문서**  
+> **Comprehensive Technical Document for Social Impact Competition Submission**  
 > Illegal Gambling Domain Detection Crawler - Technical Architecture
 
 ---
 
-## 목차
+## Table of Contents
 
-1. [개요 (Executive Summary)](#1-개요-executive-summary)
-2. [문제 정의 및 배경](#2-문제-정의-및-배경)
-3. [시스템 아키텍처](#3-시스템-아키텍처)
-4. [컴포넌트 상세 설명](#4-컴포넌트-상세-설명)
-5. [데이터 플로우](#5-데이터-플로우)
-6. [기술적 혁신 및 특징](#6-기술적-혁신-및-특징)
-7. [성능 및 확장성](#7-성능-및-확장성)
-8. [보안 및 신뢰성](#8-보안-및-신뢰성)
-9. [사회적 가치 및 영향](#9-사회적-가치-및-영향)
-10. [기술 스택](#10-기술-스택)
-11. [향후 발전 방향](#11-향후-발전-방향)
-
----
-
-## 1. 개요 (Executive Summary)
-
-### 1.1 프로젝트 배경
-
-불법 온라인 도박은 전 세계적으로 심각한 사회 문제를 야기하고 있습니다. 한국의 경우 2023년 기준 불법 도박 시장 규모가 약 **100조 원**에 달하며, 이로 인한 가정 파탄, 청소년 범죄, 자살 등의 2차 피해가 급증하고 있습니다. 특히 불법 도박 사이트들은 검색 엔진 최적화(SEO)와 다양한 키워드 광고를 통해 일반 사용자들을 유인하고 있어, 이를 체계적으로 탐지하고 차단하는 시스템이 절실히 필요한 상황입니다.
-
-### 1.2 솔루션 개요
-
-본 시스템은 **AI 기반 자동 크롤링 기술**과 **Google Gemini 2.5 Flash API**를 결합하여 불법 도박 사이트를 자동으로 탐지하고 분류하는 혁신적인 솔루션입니다. 키워드 기반 검색을 통해 의심 사이트를 발견하고, 각 사이트의 콘텐츠를 AI로 분석하여 불법성을 판별합니다.
-
-**핵심 기능:**
-- 🔍 **자동화된 키워드 검색**: 도박 관련 키워드 조합으로 검색 엔진 자동 탐색
-- 🤖 **AI 기반 사이트 분류**: Gemini AI가 사이트 콘텐츠를 분석하여 불법성 판별
-- 🛡️ **봇 탐지 회피**: Selenium + Requests 이중 폴백 메커니즘으로 안정적 크롤링
-- 💾 **영구 데이터 저장**: PostgreSQL(Supabase) 기반 데이터베이스 통합
-- 📊 **높은 신뢰도**: 신뢰도 점수(confidence score)와 탐지 키워드 제공
-
-### 1.3 주요 성과 및 차별점
-
-| 구분 | 기존 방법 | 본 시스템 |
-|------|----------|----------|
-| **탐지 방식** | 수동 신고 기반 | 자동 크롤링 + AI 분석 |
-| **정확도** | 낮음 (오탐 다수) | 높음 (Gemini AI 기반) |
-| **처리 속도** | 느림 (인력 의존) | 빠름 (자동화) |
-| **확장성** | 제한적 | 무제한 확장 가능 |
-| **비용** | 높음 (인건비) | 낮음 (API 비용만) |
-| **객관성** | 주관적 판단 | AI 기반 객관적 분석 |
-
-**핵심 차별점:**
-1. **이중 폴백 메커니즘**: Selenium 실패 시 자동으로 Requests 라이브러리로 전환하여 안정성 극대화
-2. **AI 기반 정밀 분석**: 단순 키워드 매칭이 아닌 콘텐츠 전체를 AI가 맥락적으로 이해
-3. **확장 가능한 모듈 설계**: 각 컴포넌트가 독립적으로 작동하여 유지보수 용이
-4. **실시간 데이터베이스 연동**: 탐지 결과를 PostgreSQL에 저장하여 정책 수립 지원
+1. [Executive Summary](#1-executive-summary)
+2. [Problem Definition and Background](#2-problem-definition-and-background)
+3. [System Architecture](#3-system-architecture)
+4. [Component Details](#4-component-details)
+5. [Data Flow](#5-data-flow)
+6. [Technical Innovation and Features](#6-technical-innovation-and-features)
+7. [Performance and Scalability](#7-performance-and-scalability)
+8. [Security and Reliability](#8-security-and-reliability)
+9. [Social Value and Impact](#9-social-value-and-impact)
+10. [Technology Stack](#10-technology-stack)
+11. [Future Development Roadmap](#11-future-development-roadmap)
 
 ---
 
-## 2. 문제 정의 및 배경
+## 1. Executive Summary
 
-### 2.1 불법 도박의 사회적 문제
+### 1.1 Project Background
 
-불법 온라인 도박은 다음과 같은 심각한 사회적 문제를 야기합니다:
+Illegal online gambling poses serious social problems worldwide. In South Korea, as of 2023, the illegal gambling market is estimated at approximately **100 trillion KRW (₩100T)**, causing a surge in secondary harms such as family breakdown, juvenile crime, and suicide. In particular, illegal gambling sites lure ordinary users through search engine optimization (SEO) and various keyword advertising, making it critically necessary to build a system that can systematically detect and block them.
 
-#### 2.1.1 경제적 피해
-- **시장 규모**: 한국 불법 도박 시장 연간 약 100조 원 (2023년 기준)
-- **개인 파산**: 도박 중독으로 인한 연간 개인 파산 건수 증가
-- **범죄 연계**: 불법 대출, 사기, 갈취 등 2차 범죄 유발
+### 1.2 Solution Overview
 
-#### 2.1.2 정신 건강 문제
-- **도박 중독**: WHO 공식 질병 코드(F63.0) 등재
-- **자살률 증가**: 도박 중독자의 자살 시도율 일반인 대비 **4배 이상**
-- **가정 파탄**: 이혼, 가정 폭력, 아동 방치 등 가족 해체
+This system is an innovative solution that combines **AI-based automated crawling technology** with the **Google Gemini 2.5 Flash API** to automatically detect and classify illegal gambling sites. It discovers suspicious sites through keyword-based searches, then uses AI to analyze each site's content and determine its illegality.
 
-#### 2.1.3 청소년 문제
-- **접근성 증가**: 스마트폰 보급으로 청소년 도박 접근성 급증
-- **학업 포기**: 도박 중독으로 인한 학업 중단 및 범죄 경로 진입
-- **또래 압력**: SNS를 통한 도박 사이트 확산
+**Core Features:**
+- 🔍 **Automated Keyword Search**: Automatically searches search engines using combinations of gambling-related keywords
+- 🤖 **AI-Based Site Classification**: Gemini AI analyzes site content to determine illegality
+- 🛡️ **Bot Detection Evasion**: Stable crawling via dual Selenium + Requests fallback mechanism
+- 💾 **Persistent Data Storage**: Database integration based on PostgreSQL (Supabase)
+- 📊 **High Reliability**: Provides confidence scores and detected keywords
 
-### 2.2 기존 탐지 방법의 한계
+### 1.3 Key Achievements and Differentiators
 
-현재 불법 도박 사이트 탐지는 주로 다음과 같은 방식으로 이루어집니다:
+| Category | Existing Methods | This System |
+|----------|-----------------|-------------|
+| **Detection Method** | Manual report-based | Automated crawling + AI analysis |
+| **Accuracy** | Low (many false positives) | High (Gemini AI-based) |
+| **Processing Speed** | Slow (labor-dependent) | Fast (automated) |
+| **Scalability** | Limited | Unlimited scalability |
+| **Cost** | High (labor costs) | Low (API costs only) |
+| **Objectivity** | Subjective judgment | AI-based objective analysis |
 
-#### 2.2.1 수동 신고 기반 시스템
-- **한계**: 신고가 들어온 후에야 대응 가능 (사후 대응)
-- **지연**: 신고 → 검토 → 차단까지 평균 2-4주 소요
-- **누락**: 신고되지 않은 사이트는 탐지 불가능
-
-#### 2.2.2 키워드 기반 필터링
-- **한계**: 단순 키워드 매칭으로 오탐(False Positive) 다수
-- **우회**: 변형 텍스트, 이미지, 암호화된 콘텐츠로 쉽게 우회 가능
-- **유지보수**: 새로운 키워드 패턴 등장 시 수동 업데이트 필요
-
-#### 2.2.3 IP/도메인 차단
-- **한계**: 차단 후 즉시 새 도메인으로 이전
-- **속도**: 차단 속도보다 새 사이트 생성 속도가 더 빠름
-- **비효율**: "후추격(Whack-a-Mole)" 방식으로 근본적 해결 불가
-
-### 2.3 본 시스템의 필요성
-
-이러한 문제를 해결하기 위해 다음과 같은 특성을 가진 시스템이 필요합니다:
-
-1. **자동화**: 사람의 개입 없이 24/7 자동으로 새로운 사이트 탐지
-2. **정확성**: AI 기반 콘텐츠 분석으로 오탐률 최소화
-3. **신속성**: 실시간 크롤링으로 신규 사이트 즉시 포착
-4. **확장성**: 키워드, 검색 엔진, 분석 모델 쉽게 확장 가능
-5. **데이터 축적**: 탐지 데이터를 데이터베이스에 저장하여 패턴 분석 및 정책 수립 지원
-
-본 시스템은 이러한 요구사항을 모두 충족하는 최초의 **AI 기반 자동 불법 도박 사이트 탐지 시스템**입니다.
+**Key Differentiators:**
+1. **Dual Fallback Mechanism**: Automatically switches to the Requests library when Selenium fails, maximizing stability
+2. **AI-Based Precision Analysis**: AI contextually understands entire content rather than simple keyword matching
+3. **Extensible Modular Design**: Each component operates independently for easy maintenance
+4. **Real-Time Database Integration**: Stores detection results in PostgreSQL to support policy development
 
 ---
 
-## 3. 시스템 아키텍처
+## 2. Problem Definition and Background
 
-### 3.1 전체 시스템 구조
+### 2.1 Social Problems of Illegal Gambling
 
-본 시스템은 **모듈화된 파이프라인 아키텍처**를 채택하여 각 컴포넌트가 독립적으로 작동하면서도 유기적으로 연결됩니다.
+Illegal online gambling causes the following serious social problems:
+
+#### 2.1.1 Economic Harm
+- **Market Size**: South Korea's illegal gambling market is approximately 100 trillion KRW annually (as of 2023)
+- **Personal Bankruptcy**: Annual increase in personal bankruptcies due to gambling addiction
+- **Crime Links**: Induces secondary crimes such as illegal loans, fraud, and extortion
+
+#### 2.1.2 Mental Health Issues
+- **Gambling Addiction**: Listed as an official WHO disease code (F63.0)
+- **Rising Suicide Rates**: The suicide attempt rate among gambling addicts is **more than 4 times** higher than the general population
+- **Family Breakdown**: Family dissolution including divorce, domestic violence, and child neglect
+
+#### 2.1.3 Youth Issues
+- **Increased Accessibility**: Rapid increase in youth access to gambling via widespread smartphone use
+- **Dropping Out of School**: Discontinuation of education and entry into criminal pathways due to gambling addiction
+- **Peer Pressure**: Spread of gambling sites through social media
+
+### 2.2 Limitations of Existing Detection Methods
+
+Current illegal gambling site detection is primarily carried out in the following ways:
+
+#### 2.2.1 Manual Report-Based System
+- **Limitation**: Response is only possible after a report is filed (reactive approach)
+- **Delay**: Average of 2–4 weeks from report → review → blocking
+- **Gaps**: Sites that are not reported cannot be detected
+
+#### 2.2.2 Keyword-Based Filtering
+- **Limitation**: Simple keyword matching produces many false positives
+- **Circumvention**: Easily bypassed with variant text, images, and encrypted content
+- **Maintenance**: Manual updates required when new keyword patterns emerge
+
+#### 2.2.3 IP/Domain Blocking
+- **Limitation**: Immediately migrates to a new domain after being blocked
+- **Speed**: New site creation is faster than the blocking speed
+- **Inefficiency**: Fundamentally unsolvable via the "Whack-a-Mole" approach
+
+### 2.3 Necessity of This System
+
+To address these problems, a system with the following characteristics is needed:
+
+1. **Automation**: Automatically detects new sites 24/7 without human intervention
+2. **Accuracy**: Minimizes false positive rate through AI-based content analysis
+3. **Speed**: Immediately captures new sites through real-time crawling
+4. **Scalability**: Easy to expand keywords, search engines, and analysis models
+5. **Data Accumulation**: Stores detection data in a database to support pattern analysis and policy development
+
+This system is the first **AI-based automated illegal gambling site detection system** that satisfies all of these requirements.
+
+---
+
+## 3. System Architecture
+
+### 3.1 Overall System Structure
+
+This system adopts a **modular pipeline architecture** where each component operates independently while being organically connected.
 
 ```mermaid
 graph TB
-    subgraph "입력 설정"
-        A[keywords.json<br/>키워드 목록]
-        B[settings.json<br/>크롤러 설정]
-        C[.env<br/>API 키 & DB 정보]
+    subgraph "Input Configuration"
+        A[keywords.json<br/>Keyword List]
+        B[settings.json<br/>Crawler Settings]
+        C[.env<br/>API Keys & DB Info]
     end
     
-    subgraph "크롤러 엔진"
-        D[KeywordManager<br/>키워드 조합 생성]
-        E[SearchEngine<br/>Selenium/Requests<br/>폴백 메커니즘]
-        F[URLExtractor<br/>URL 추출 & 정제]
-        G[GeminiClassifier<br/>AI 기반 분류]
+    subgraph "Crawler Engine"
+        D[KeywordManager<br/>Keyword Combination Generation]
+        E[SearchEngine<br/>Selenium/Requests<br/>Fallback Mechanism]
+        F[URLExtractor<br/>URL Extraction & Cleaning]
+        G[GeminiClassifier<br/>AI-Based Classification]
     end
     
-    subgraph "외부 서비스"
-        H[Google Search<br/>검색 엔진]
+    subgraph "External Services"
+        H[Google Search<br/>Search Engine]
         I[Gemini 2.5 Flash<br/>Google AI API]
     end
     
-    subgraph "저장 계층"
-        J[JSONStorage<br/>로컬 파일 저장]
+    subgraph "Storage Layer"
+        J[JSONStorage<br/>Local File Storage]
         K[DatabaseManager<br/>PostgreSQL/Supabase]
     end
     
-    subgraph "출력"
-        L[results.json<br/>분류 결과]
-        M[PostgreSQL DB<br/>영구 저장]
+    subgraph "Output"
+        L[results.json<br/>Classification Results]
+        M[PostgreSQL DB<br/>Persistent Storage]
     end
     
     A --> D
@@ -180,196 +180,196 @@ graph TB
     style M fill:#a5d6a7,stroke:#1b5e20,stroke-width:2px,color:#000
 ```
 
-### 3.2 아키텍처 설계 원칙
+### 3.2 Architecture Design Principles
 
-본 시스템은 다음과 같은 핵심 설계 원칙을 따릅니다:
+This system follows these core design principles:
 
-#### 3.2.1 단일 책임 원칙 (Single Responsibility Principle)
-각 모듈은 하나의 명확한 책임만 가집니다:
-- `KeywordManager`: 키워드 관리만
-- `SearchEngine`: 검색만
-- `URLExtractor`: URL 추출만
-- `GeminiClassifier`: AI 분류만
-- `JSONStorage`/`DatabaseManager`: 저장만
+#### 3.2.1 Single Responsibility Principle
+Each module has only one clear responsibility:
+- `KeywordManager`: Keyword management only
+- `SearchEngine`: Searching only
+- `URLExtractor`: URL extraction only
+- `GeminiClassifier`: AI classification only
+- `JSONStorage`/`DatabaseManager`: Storage only
 
-#### 3.2.2 느슨한 결합 (Loose Coupling)
-- 모듈 간 의존성 최소화
-- 인터페이스를 통한 통신
-- 한 모듈 변경이 다른 모듈에 영향 최소화
+#### 3.2.2 Loose Coupling
+- Minimize dependencies between modules
+- Communication through interfaces
+- Changes to one module have minimal impact on other modules
 
-#### 3.2.3 개방-폐쇄 원칙 (Open-Closed Principle)
-- 확장에는 열려있고 수정에는 닫혀있음
-- 새로운 검색 엔진 추가 가능
-- 새로운 저장소 추가 가능
-- 새로운 분류 모델 추가 가능
+#### 3.2.3 Open-Closed Principle
+- Open for extension, closed for modification
+- New search engines can be added
+- New storage backends can be added
+- New classification models can be added
 
-#### 3.2.4 장애 격리 (Fault Isolation)
-- 한 컴포넌트 실패가 전체 시스템 중단으로 이어지지 않음
-- 폴백 메커니즘 구현 (Selenium → Requests)
-- 에러 처리 및 로깅
+#### 3.2.4 Fault Isolation
+- Failure of one component does not lead to full system shutdown
+- Fallback mechanism implemented (Selenium → Requests)
+- Error handling and logging
 
-### 3.3 핵심 컴포넌트 개요
+### 3.3 Core Component Overview
 
-| 컴포넌트 | 역할 | 핵심 기술 | 라인 수 |
-|----------|------|----------|---------|
-| `main.py` | 진입점 | Python | 11 |
-| `crawler.py` | 전체 조율 | 파이프라인 패턴 | 202 |
-| `keyword_manager.py` | 키워드 관리 | itertools.combinations | 33 |
-| `search_engine.py` | 웹 검색 | Selenium + WebDriver | 181 |
-| `url_extractor.py` | URL 추출 | BeautifulSoup4 | 87 |
-| `gemini_classifier.py` | AI 분류 | Google Generative AI | 146 |
-| `json_storage.py` | JSON 저장 | 파일 I/O | 68 |
-| `database.py` | DB 연동 | PostgreSQL (psycopg2) | 258 |
+| Component | Role | Core Technology | Lines of Code |
+|-----------|------|----------------|---------------|
+| `main.py` | Entry point | Python | 11 |
+| `crawler.py` | Overall orchestration | Pipeline pattern | 202 |
+| `keyword_manager.py` | Keyword management | itertools.combinations | 33 |
+| `search_engine.py` | Web search | Selenium + WebDriver | 181 |
+| `url_extractor.py` | URL extraction | BeautifulSoup4 | 87 |
+| `gemini_classifier.py` | AI classification | Google Generative AI | 146 |
+| `json_storage.py` | JSON storage | File I/O | 68 |
+| `database.py` | DB integration | PostgreSQL (psycopg2) | 258 |
 
-**전체 코드 라인 수**: 약 **1,000 줄** (주석 포함)  
-**모듈 수**: 8개 (고도로 모듈화된 설계)
+**Total Lines of Code**: approximately **1,000 lines** (including comments)  
+**Number of Modules**: 8 (highly modular design)
 
 ---
 
-## 4. 컴포넌트 상세 설명
+## 4. Component Details
 
-### 4.1 KeywordManager (키워드 관리자)
+### 4.1 KeywordManager
 
-**위치**: `src/keyword_manager.py`  
-**라인 수**: 33줄  
-**핵심 기술**: `itertools.combinations`
+**Location**: `src/keyword_manager.py`  
+**Lines of Code**: 33  
+**Core Technology**: `itertools.combinations`
 
-#### 4.1.1 역할
-- `keywords.json` 파일에서 키워드 로드
-- 키워드 조합 자동 생성 (2-키워드 조합)
-- 검색 쿼리 최적화
+#### 4.1.1 Role
+- Load keywords from `keywords.json`
+- Automatically generate keyword combinations (2-keyword combinations)
+- Optimize search queries
 
-#### 4.1.2 주요 메서드
+#### 4.1.2 Key Methods
 ```python
 load_keywords() -> List[str]
-# keywords.json에서 키워드 목록을 읽어옴
-# JSON 파싱 에러 처리 포함
+# Reads the keyword list from keywords.json
+# Includes JSON parsing error handling
 
 generate_combinations() -> List[str]
-# 원본 키워드 + 2-키워드 조합 생성
-# 예: ["도박", "베팅"] → ["도박", "베팅", "도박 베팅"]
+# Generates original keywords + 2-keyword combinations
+# Example: ["gambling", "betting"] → ["gambling", "betting", "gambling betting"]
 ```
 
-#### 4.1.3 설계 특징
-- **유연성**: JSON 형식으로 키워드 쉽게 추가/수정 가능
-- **확장성**: n-키워드 조합으로 확장 가능
-- **효율성**: 중복 없이 조합 생성
+#### 4.1.3 Design Features
+- **Flexibility**: Keywords can be easily added/modified via JSON format
+- **Scalability**: Expandable to n-keyword combinations
+- **Efficiency**: Generates combinations without duplicates
 
-#### 4.1.4 사회적 가치 연결
-키워드 조합 생성은 불법 도박 사이트가 사용하는 **다양한 우회 표현**을 포착하는 데 핵심적입니다. 예를 들어 "스포츠" + "배팅"을 조합하면 단일 키워드로는 찾기 어려운 사이트를 발견할 수 있습니다.
+#### 4.1.4 Connection to Social Value
+Keyword combination generation is essential for capturing the **various circumvention expressions** used by illegal gambling sites. For example, combining "sports" + "betting" can discover sites that are difficult to find with a single keyword.
 
 ---
 
-### 4.2 SearchEngine (검색 엔진 자동화)
+### 4.2 SearchEngine (Search Engine Automation)
 
-**위치**: `src/search_engine.py`  
-**라인 수**: 181줄  
-**핵심 기술**: Selenium WebDriver, ChromeDriver
+**Location**: `src/search_engine.py`  
+**Lines of Code**: 181  
+**Core Technology**: Selenium WebDriver, ChromeDriver
 
-#### 4.2.1 역할
-- Google 검색 자동 실행
-- 검색 결과 페이지에서 링크 추출
-- 각 링크 방문 및 HTML 수집
-- 봇 탐지 회피 메커니즘 구현
+#### 4.2.1 Role
+- Automate Google searches
+- Extract links from search result pages
+- Visit each link and collect HTML
+- Implement bot detection evasion mechanisms
 
-#### 4.2.2 주요 메서드
+#### 4.2.2 Key Methods
 
 ```python
 setup_driver()
-# ChromeDriver 초기화
-# 봇 탐지 회피 옵션 설정 (User-Agent 랜덤화, automation 플래그 제거)
+# Initialize ChromeDriver
+# Configure bot detection evasion options (User-Agent randomization, remove automation flags)
 
 search_google(keyword: str) -> str
-# Google 검색 실행
-# 랜덤 딜레이로 봇 탐지 회피
+# Execute Google search
+# Evade bot detection with random delays
 
 visit_search_result_links(max_links: int) -> list
-# 검색 결과 링크 순차 방문
-# 각 페이지에서 HTML 수집
-# (URL, HTML) 튜플 리스트 반환
+# Sequentially visit search result links
+# Collect HTML from each page
+# Returns list of (URL, HTML) tuples
 ```
 
-#### 4.2.3 봇 탐지 회피 전략
+#### 4.2.3 Bot Detection Evasion Strategy
 
-본 시스템은 다음과 같은 고급 봇 탐지 회피 기법을 사용합니다:
+This system uses the following advanced bot detection evasion techniques:
 
-1. **User-Agent 랜덤화**
+1. **User-Agent Randomization**
 ```python
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ...",
-    # ... 여러 실제 브라우저 User-Agent
+    # ... Multiple real browser User-Agents
 ]
 ```
 
-2. **자동화 플래그 제거**
+2. **Removing Automation Flags**
 ```python
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 ```
 
-3. **랜덤 딜레이**
+3. **Random Delays**
 ```python
-random_delay = random.uniform(2, 4)  # 2-4초 랜덤 대기
+random_delay = random.uniform(2, 4)  # Wait randomly 2-4 seconds
 time.sleep(random_delay)
 ```
 
-4. **자연스러운 탐색 패턴**
-- 링크 클릭 → 페이지 로딩 대기 → HTML 수집 → 뒤로가기
-- 실제 사용자의 탐색 패턴 모방
+4. **Natural Navigation Patterns**
+- Click link → Wait for page load → Collect HTML → Go back
+- Mimics real user navigation patterns
 
-#### 4.2.4 에러 복구 메커니즘
+#### 4.2.4 Error Recovery Mechanism
 
 ```python
 try:
     link_element.click()
-    # ... HTML 수집
-    driver.back()  # 검색 결과로 복귀
+    # ... Collect HTML
+    driver.back()  # Return to search results
 except Exception as e:
     print(f"Error visiting link: {e}")
-    driver.back()  # 에러 발생 시에도 복귀 시도
+    driver.back()  # Attempt to return even on error
     continue
 ```
 
-#### 4.2.5 사회적 가치 연결
-Selenium 기반 자동화는 **대규모 검색 작업**을 가능하게 하여, 수작업으로는 불가능한 수천 개의 키워드를 빠르게 탐색할 수 있습니다. 이를 통해 신규 불법 사이트를 조기에 발견하여 피해를 최소화할 수 있습니다.
+#### 4.2.5 Connection to Social Value
+Selenium-based automation enables **large-scale search operations**, allowing rapid exploration of thousands of keywords that would be impossible to do manually. This enables early discovery of new illegal sites to minimize harm.
 
 ---
 
-### 4.3 URLExtractor (URL 추출 및 정제)
+### 4.3 URLExtractor (URL Extraction and Cleaning)
 
-**위치**: `src/url_extractor.py`  
-**라인 수**: 87줄  
-**핵심 기술**: BeautifulSoup4, urllib.parse
+**Location**: `src/url_extractor.py`  
+**Lines of Code**: 87  
+**Core Technology**: BeautifulSoup4, urllib.parse
 
-#### 4.3.1 역할
-- HTML에서 URL 추출
-- Google 리다이렉트 URL 해석
-- 트래킹 파라미터 제거
-- URL 유효성 검증 및 중복 제거
+#### 4.3.1 Role
+- Extract URLs from HTML
+- Parse Google redirect URLs
+- Remove tracking parameters
+- Validate URLs and remove duplicates
 
-#### 4.3.2 주요 메서드
+#### 4.3.2 Key Methods
 
 ```python
 extract_urls_from_html(html_content: str) -> List[str]
-# HTML에서 모든 링크 추출
-# Google 검색 결과의 rso 영역만 타겟팅
+# Extract all links from HTML
+# Targets only the rso area of Google search results
 
 _extract_real_url_from_google(url: str) -> str
-# Google 리다이렉트 URL 파싱
-# 예: /url?q=https://example.com&... → https://example.com
+# Parse Google redirect URL
+# Example: /url?q=https://example.com&... → https://example.com
 
 _is_valid_url(url: str) -> bool
-# URL 유효성 검증 (프로토콜, 도메인 확인)
+# Validate URL (check protocol, domain)
 
 _clean_tracking_params(url: str) -> str
-# utm_*, gclid, fbclid 등 트래킹 파라미터 제거
+# Remove tracking parameters such as utm_*, gclid, fbclid, etc.
 ```
 
-#### 4.3.3 트래킹 파라미터 정제
+#### 4.3.3 Tracking Parameter Cleaning
 
-불필요한 트래킹 파라미터를 제거하여 URL 중복을 방지합니다:
+Removes unnecessary tracking parameters to prevent URL duplication:
 
 ```python
 tracking_params = [
@@ -381,112 +381,112 @@ tracking_params = [
 **Before**: `https://example.com/page?utm_source=google&utm_medium=cpc&id=123`  
 **After**: `https://example.com/page?id=123`
 
-#### 4.3.4 설계 특징
-- **견고성**: 다양한 URL 형식 처리 (상대 경로, 프로토콜 생략 등)
-- **정확성**: Google 리다이렉트 URL 정확히 파싱
-- **효율성**: Set 자료구조로 자동 중복 제거
+#### 4.3.4 Design Features
+- **Robustness**: Handles various URL formats (relative paths, omitted protocols, etc.)
+- **Accuracy**: Accurately parses Google redirect URLs
+- **Efficiency**: Automatic deduplication using Set data structures
 
-#### 4.3.5 사회적 가치 연결
-URL 정제는 **정확한 사이트 식별**을 가능하게 합니다. 트래킹 파라미터 제거로 동일 사이트의 중복 수집을 방지하여, 데이터베이스의 정확성을 높이고 정책 수립에 신뢰할 수 있는 데이터를 제공합니다.
+#### 4.3.5 Connection to Social Value
+URL cleaning enables **accurate site identification**. By removing tracking parameters to prevent duplicate collection of the same site, it improves database accuracy and provides reliable data for policy development.
 
 ---
 
-### 4.4 GeminiClassifier (AI 기반 사이트 분류)
+### 4.4 GeminiClassifier (AI-Based Site Classification)
 
-**위치**: `src/gemini_classifier.py`  
-**라인 수**: 146줄  
-**핵심 기술**: Google Generative AI (Gemini 2.5 Flash)
+**Location**: `src/gemini_classifier.py`  
+**Lines of Code**: 146  
+**Core Technology**: Google Generative AI (Gemini 2.5 Flash)
 
-#### 4.4.1 역할
-- URL과 HTML 콘텐츠를 Gemini AI로 분석
-- 불법 도박 사이트 여부 판별
-- 신뢰도 점수 및 판단 근거 제공
-- 탐지된 키워드 추출
+#### 4.4.1 Role
+- Analyze URL and HTML content with Gemini AI
+- Determine whether a site is an illegal gambling site
+- Provide confidence scores and reasoning
+- Extract detected keywords
 
-#### 4.4.2 주요 메서드
+#### 4.4.2 Key Methods
 
 ```python
 __init__(api_key: Optional[str] = None)
-# Gemini API 초기화
-# .env 파일에서 GEMINI_API_KEY 자동 로드
+# Initialize Gemini API
+# Automatically loads GEMINI_API_KEY from .env file
 
 classify_url(url: str, html_content: str) -> Dict[str, Any]
-# URL과 HTML을 분석하여 불법성 판별
-# 반환값: {is_illegal, confidence, reason, detected_keywords, error}
+# Analyzes URL and HTML to determine illegality
+# Returns: {is_illegal, confidence, reason, detected_keywords, error}
 
 _build_prompt(url: str, html_content: str) -> str
-# Gemini에 전달할 프롬프트 생성
-# 판단 기준과 출력 형식 명확히 지정
+# Generates prompt to pass to Gemini
+# Clearly specifies judgment criteria and output format
 
 _parse_response(response_text: str) -> Dict[str, Any]
-# Gemini 응답(JSON) 파싱
-# 마크다운 코드 블록 제거 등 전처리
+# Parses Gemini response (JSON)
+# Preprocessing such as removing markdown code blocks
 ```
 
-#### 4.4.3 AI 프롬프트 설계
+#### 4.4.3 AI Prompt Design
 
-Gemini에 전달하는 프롬프트는 다음과 같이 구조화되어 있습니다:
+The prompt passed to Gemini is structured as follows:
 
 ```
-당신은 불법 온라인 도박 사이트를 탐지하는 전문가입니다.
+You are an expert in detecting illegal online gambling sites.
 
-다음 웹사이트의 정보를 분석하고, 이것이 불법 도박 사이트인지 판단하세요.
+Analyze the following website information and determine whether it is an illegal gambling site.
 
 URL: {url}
-HTML 콘텐츠: {html_content}
+HTML Content: {html_content}
 
-판단 기준:
-1. 베팅/도박 관련 키워드
-2. 결제 수단 제공
-3. 로그인/회원가입 시스템
-4. 불법성을 암시하는 언어
-5. 지역 규제 회피 표현
-6. 다양한 언어로 된 도박 관련 용어
+Judgment Criteria:
+1. Betting/gambling-related keywords
+2. Payment methods provided
+3. Login/registration system
+4. Language suggesting illegality
+5. Expressions evading regional regulations
+6. Gambling-related terms in various languages
 
-응답 형식 (JSON만 반환):
+Response Format (return JSON only):
 {
   "is_illegal": true/false,
   "confidence": 0.0-1.0,
-  "reason": "판단 이유",
-  "detected_keywords": ["키워드1", "키워드2"]
+  "reason": "Reason for judgment",
+  "detected_keywords": ["keyword1", "keyword2"]
 }
 ```
 
-#### 4.4.4 응답 예시
+#### 4.4.4 Response Examples
 
-**불법 사이트로 판별된 경우:**
+**When classified as an illegal site:**
 ```json
 {
   "url": "https://example-gambling.com",
   "is_illegal": true,
   "confidence": 0.95,
-  "reason": "베팅 시스템, 결제 기능, 라이선스 정보 없음이 확인됨",
+  "reason": "Betting system, payment functionality, and absence of license information confirmed",
   "detected_keywords": ["sports betting", "casino", "deposit", "withdraw"],
   "error": null
 }
 ```
 
-**합법 사이트로 판별된 경우:**
+**When classified as a legal site:**
 ```json
 {
   "url": "https://news-site.com",
   "is_illegal": false,
   "confidence": 0.88,
-  "reason": "스포츠 뉴스 포털로 도박 서비스 제공하지 않음",
+  "reason": "Sports news portal that does not provide gambling services",
   "detected_keywords": [],
   "error": null
 }
 ```
 
-#### 4.4.5 성능 최적화
+#### 4.4.5 Performance Optimization
 
-1. **HTML 크기 제한**: API 입력 크기 제한 준수
+1. **HTML Size Limit**: Comply with API input size limits
 ```python
 if len(html_content) > 50000:
     html_content = html_content[:50000]
 ```
 
-2. **에러 처리**: API 호출 실패 시 우아한 처리
+2. **Error Handling**: Graceful handling when API call fails
 ```python
 except Exception as e:
     return {
@@ -496,163 +496,163 @@ except Exception as e:
     }
 ```
 
-#### 4.4.6 사회적 가치 연결
-AI 기반 분류는 **높은 정확도**와 **객관성**을 제공합니다. 인간 검토자의 주관적 판단이나 피로도와 달리, AI는 일관된 기준으로 24/7 분석할 수 있어 **대규모 자동화**를 가능하게 합니다.
+#### 4.4.6 Connection to Social Value
+AI-based classification provides **high accuracy** and **objectivity**. Unlike the subjective judgment or fatigue of human reviewers, AI can analyze consistently 24/7 by a uniform standard, enabling **large-scale automation**.
 
 ---
 
-### 4.5 JSONStorage & DatabaseManager (데이터 저장 계층)
+### 4.5 JSONStorage & DatabaseManager (Data Storage Layer)
 
 #### 4.5.1 JSONStorage
 
-**위치**: `src/json_storage.py`  
-**라인 수**: 68줄  
+**Location**: `src/json_storage.py`  
+**Lines of Code**: 68  
 
-**역할:**
-- 탐지 결과를 JSON 파일에 저장
-- 기존 데이터와 병합 및 중복 제거
-- 통계 정보 제공
+**Role:**
+- Save detection results to a JSON file
+- Merge with existing data and remove duplicates
+- Provide statistics
 
-**주요 메서드:**
+**Key Methods:**
 ```python
 save_results(urls: List[str], keyword: str, classification_results: List[Dict])
-# URL과 분류 결과를 JSON 파일에 저장
+# Save URLs and classification results to JSON file
 
 load_existing_data() -> List[Dict]
-# 기존 JSON 데이터 로드
+# Load existing JSON data
 
 get_existing_urls() -> set
-# 중복 방지를 위한 기존 URL 집합 반환
+# Return set of existing URLs for deduplication
 
 get_stats() -> Dict
-# 통계 정보 (총 URL 수, 고유 URL 수, 키워드 수 등)
+# Statistics (total URLs, unique URLs, keyword count, etc.)
 ```
 
 #### 4.5.2 DatabaseManager
 
-**위치**: `src/database.py`  
-**라인 수**: 258줄  
-**핵심 기술**: PostgreSQL (psycopg2), Supabase
+**Location**: `src/database.py`  
+**Lines of Code**: 258  
+**Core Technology**: PostgreSQL (psycopg2), Supabase
 
-**역할:**
-- PostgreSQL 데이터베이스 연결
-- 테이블 생성 및 인덱싱
-- 탐지 결과 영구 저장
-- JSON 데이터 벌크 임포트
+**Role:**
+- Connect to PostgreSQL database
+- Create tables and indexes
+- Persistently store detection results
+- Bulk import JSON data
 
-**주요 메서드:**
+**Key Methods:**
 ```python
 connect()
-# Supabase PostgreSQL 데이터베이스 연결
+# Connect to Supabase PostgreSQL database
 
 create_tables()
-# gambling_urls 테이블 생성
-# 인덱스 및 트리거 설정
+# Create gambling_urls table
+# Configure indexes and triggers
 
 insert_url(url_data: Dict) -> bool
-# 단일 URL 데이터 삽입
-# 중복 시 자동 스킵 (UNIQUE constraint)
+# Insert single URL data
+# Automatically skips duplicates (UNIQUE constraint)
 
 import_from_json(json_file: str)
-# results.json의 모든 데이터를 데이터베이스로 임포트
-# 벌크 INSERT로 성능 최적화
+# Import all data from results.json to the database
+# Performance optimized with bulk INSERT
 
 query_illegal_urls(limit: int) -> List[Dict]
-# 불법으로 판별된 사이트 조회
+# Query sites classified as illegal
 ```
 
-#### 4.5.3 데이터베이스 스키마
+#### 4.5.3 Database Schema
 
 ```sql
 CREATE TABLE gambling_urls (
     id SERIAL PRIMARY KEY,
-    url TEXT NOT NULL UNIQUE,                  -- URL (중복 방지)
-    keyword_used TEXT NOT NULL,                -- 검색에 사용된 키워드
-    collected_at TIMESTAMP NOT NULL,           -- 수집 시간
-    is_illegal BOOLEAN NOT NULL,               -- 불법 여부
-    gemini_confidence NUMERIC(3, 2),           -- Gemini 신뢰도 (0.00-1.00)
-    gemini_reason TEXT,                        -- 판단 근거
-    gemini_error TEXT,                         -- 에러 메시지
-    detected_keywords JSONB,                   -- 탐지된 키워드 (JSON 배열)
+    url TEXT NOT NULL UNIQUE,                  -- URL (prevent duplicates)
+    keyword_used TEXT NOT NULL,                -- Keyword used for search
+    collected_at TIMESTAMP NOT NULL,           -- Collection time
+    is_illegal BOOLEAN NOT NULL,               -- Whether illegal
+    gemini_confidence NUMERIC(3, 2),           -- Gemini confidence (0.00-1.00)
+    gemini_reason TEXT,                        -- Reasoning
+    gemini_error TEXT,                         -- Error message
+    detected_keywords JSONB,                   -- Detected keywords (JSON array)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-#### 4.5.4 인덱싱 전략
+#### 4.5.4 Indexing Strategy
 
-성능 최적화를 위한 인덱스:
+Indexes for performance optimization:
 
 ```sql
--- URL 검색 최적화
+-- URL search optimization
 CREATE INDEX idx_gambling_urls_url ON gambling_urls(url);
 
--- 불법 사이트 필터링 최적화
+-- Illegal site filtering optimization
 CREATE INDEX idx_gambling_urls_is_illegal ON gambling_urls(is_illegal);
 
--- 시간순 정렬 최적화
+-- Chronological sort optimization
 CREATE INDEX idx_gambling_urls_collected_at ON gambling_urls(collected_at DESC);
 
--- JSONB 키워드 검색 최적화 (GIN 인덱스)
+-- JSONB keyword search optimization (GIN index)
 CREATE INDEX idx_gambling_urls_detected_keywords 
 ON gambling_urls USING GIN(detected_keywords);
 ```
 
-#### 4.5.5 사회적 가치 연결
-데이터베이스 통합은 **장기적인 데이터 축적**과 **패턴 분석**을 가능하게 합니다. 정부 기관이나 연구자들은 이 데이터를 활용하여:
-- 불법 도박 사이트의 시간별 추이 분석
-- 자주 사용되는 키워드 패턴 파악
-- 지역별/언어별 특성 연구
-- 차단 정책의 효과 측정
+#### 4.5.5 Connection to Social Value
+Database integration enables **long-term data accumulation** and **pattern analysis**. Government agencies and researchers can use this data to:
+- Analyze trends in illegal gambling sites over time
+- Identify frequently used keyword patterns
+- Study regional and linguistic characteristics
+- Measure the effectiveness of blocking policies
 
 ---
 
-### 4.6 Crawler (전체 프로세스 조율)
+### 4.6 Crawler (Overall Process Orchestration)
 
-**위치**: `src/crawler.py`  
-**라인 수**: 202줄  
-**역할**: 전체 컴포넌트 통합 및 파이프라인 조율
+**Location**: `src/crawler.py`  
+**Lines of Code**: 202  
+**Role**: Integrate all components and orchestrate the pipeline
 
-#### 4.6.1 핵심 로직
+#### 4.6.1 Core Logic
 
 ```python
 def crawl(self):
-    # 1. 키워드 조합 생성
+    # 1. Generate keyword combinations
     keywords = self.keyword_manager.generate_combinations()
     
-    # 2. 각 키워드로 검색
+    # 2. Search with each keyword
     for keyword in keywords:
-        # 2.1 Google 검색 실행
+        # 2.1 Execute Google search
         self.search_engine.search_google(keyword)
         
-        # 2.2 검색 결과 링크 방문 및 HTML 수집
+        # 2.2 Visit search result links and collect HTML
         visited_results = self.search_engine.visit_search_result_links(max_links)
         
-        # 2.3 중복 URL 제외
+        # 2.3 Exclude duplicate URLs
         new_results = [r for r in visited_results if r[0] not in existing_urls]
         
-        # 2.4 Gemini AI로 분류
+        # 2.4 Classify with Gemini AI
         filtered_urls, classifications = self._classify_visited_results(new_results)
         
-        # 2.5 불법 사이트만 저장
+        # 2.5 Save only illegal sites
         if filtered_urls:
             self.storage.save_results(filtered_urls, keyword, classifications)
         
-        # 2.6 다음 검색 전 대기
+        # 2.6 Wait before next search
         time.sleep(delay)
 ```
 
-#### 4.6.2 설계 특징
-- **중앙 조율**: 모든 컴포넌트의 생명주기 관리
-- **에러 격리**: 한 키워드 실패가 전체 크롤링 중단으로 이어지지 않음
-- **진행 상황 출력**: 실시간 로그로 투명성 제공
-- **통계 제공**: 크롤링 완료 후 요약 통계 출력
+#### 4.6.2 Design Features
+- **Central Orchestration**: Manages the lifecycle of all components
+- **Error Isolation**: Failure of one keyword does not stop the entire crawl
+- **Progress Output**: Real-time logging provides transparency
+- **Statistics**: Prints summary statistics after crawling completes
 
 ---
 
-## 5. 데이터 플로우
+## 5. Data Flow
 
-### 5.1 실행 시퀀스
+### 5.1 Execution Sequence
 
 ```mermaid
 sequenceDiagram
@@ -664,73 +664,73 @@ sequenceDiagram
     participant GC as GeminiClassifier
     participant Storage as JSONStorage/Database
     
-    Main->>Crawler: 크롤러 초기화
-    Crawler->>KM: 키워드 조합 생성
-    KM-->>Crawler: 키워드 리스트 반환
+    Main->>Crawler: Initialize crawler
+    Crawler->>KM: Generate keyword combinations
+    KM-->>Crawler: Return keyword list
     
-    loop 각 키워드마다
-        Crawler->>SE: Google 검색 수행
-        SE->>SE: Selenium 시도<br/>(실패시 requests 폴백)
-        SE-->>Crawler: 검색 결과 HTML
+    loop For each keyword
+        Crawler->>SE: Perform Google search
+        SE->>SE: Attempt Selenium<br/>(fall back to requests on failure)
+        SE-->>Crawler: Search result HTML
         
-        Crawler->>SE: 검색 결과 링크 방문<br/>(최대 N개)
-        SE-->>Crawler: (URL, HTML) 쌍 리스트
+        Crawler->>SE: Visit search result links<br/>(up to N)
+        SE-->>Crawler: List of (URL, HTML) pairs
         
-        Crawler->>UE: URL 추출 & 정제
-        UE->>UE: 중복 제거<br/>트래킹 파라미터 제거
-        UE-->>Crawler: 정제된 URL 리스트
+        Crawler->>UE: Extract & clean URLs
+        UE->>UE: Remove duplicates<br/>Remove tracking parameters
+        UE-->>Crawler: Cleaned URL list
         
-        loop 각 새로운 URL마다
-            Crawler->>GC: 불법 도박 사이트 분류
-            GC->>GC: Gemini API 호출<br/>HTML 분석
-            GC-->>Crawler: 분류 결과<br/>(is_illegal, confidence, keywords)
+        loop For each new URL
+            Crawler->>GC: Classify as illegal gambling site
+            GC->>GC: Call Gemini API<br/>Analyze HTML
+            GC-->>Crawler: Classification result<br/>(is_illegal, confidence, keywords)
             
-            alt 불법 사이트로 판별
-                Crawler->>Storage: 결과 저장
-                Storage->>Storage: JSON 파일 업데이트<br/>DB에 INSERT
+            alt Classified as illegal site
+                Crawler->>Storage: Save result
+                Storage->>Storage: Update JSON file<br/>INSERT into DB
             end
         end
         
-        Crawler->>Crawler: delay 대기
+        Crawler->>Crawler: Wait for delay
     end
     
-    Crawler-->>Main: 크롤링 완료<br/>통계 출력
+    Crawler-->>Main: Crawling complete<br/>Print statistics
 ```
 
-### 5.2 데이터 변환 과정
+### 5.2 Data Transformation Process
 
-#### 5.2.1 단계별 데이터 형식
+#### 5.2.1 Data Format at Each Stage
 
-| 단계 | 컴포넌트 | 입력 | 출력 |
-|------|----------|------|------|
-| 1 | KeywordManager | `keywords.json` | `List[str]` 키워드 |
-| 2 | SearchEngine | 키워드(str) | HTML 문자열 |
+| Stage | Component | Input | Output |
+|-------|-----------|-------|--------|
+| 1 | KeywordManager | `keywords.json` | `List[str]` keywords |
+| 2 | SearchEngine | keyword (str) | HTML string |
 | 3 | SearchEngine | HTML | `List[(url, html)]` |
-| 4 | URLExtractor | HTML | `List[url]` 정제된 URL |
-| 5 | GeminiClassifier | (url, html) | `Dict` 분류 결과 |
+| 4 | URLExtractor | HTML | `List[url]` cleaned URLs |
+| 5 | GeminiClassifier | (url, html) | `Dict` classification result |
 | 6 | JSONStorage | (urls, classifications) | `results.json` |
-| 7 | DatabaseManager | JSON 데이터 | PostgreSQL 레코드 |
+| 7 | DatabaseManager | JSON data | PostgreSQL records |
 
-#### 5.2.2 예시: 키워드 → 최종 저장
+#### 5.2.2 Example: Keyword → Final Storage
 
-**입력 (keywords.json):**
+**Input (keywords.json):**
 ```json
 {
-  "keywords": ["스포츠", "베팅"]
+  "keywords": ["sports", "betting"]
 }
 ```
 
-**1단계 (KeywordManager):**
+**Stage 1 (KeywordManager):**
 ```python
-["스포츠", "베팅", "스포츠 베팅"]
+["sports", "betting", "sports betting"]
 ```
 
-**2단계 (SearchEngine):**
+**Stage 2 (SearchEngine):**
 ```python
-"스포츠 베팅" → Google 검색 → HTML 문자열
+"sports betting" → Google search → HTML string
 ```
 
-**3단계 (SearchEngine):**
+**Stage 3 (SearchEngine):**
 ```python
 [
   ("https://gambling-site.com", "<html>...</html>"),
@@ -738,7 +738,7 @@ sequenceDiagram
 ]
 ```
 
-**4단계 (URLExtractor):**
+**Stage 4 (URLExtractor):**
 ```python
 [
   "https://gambling-site.com",
@@ -746,69 +746,69 @@ sequenceDiagram
 ]
 ```
 
-**5단계 (GeminiClassifier):**
+**Stage 5 (GeminiClassifier):**
 ```python
 [
   {
     "url": "https://gambling-site.com",
     "is_illegal": True,
     "confidence": 0.92,
-    "reason": "불법 스포츠 베팅 서비스 제공",
+    "reason": "Provides illegal sports betting service",
     "detected_keywords": ["sports betting", "deposit", "live casino"]
   },
   {
     "url": "https://news-site.com",
     "is_illegal": False,
     "confidence": 0.85,
-    "reason": "스포츠 뉴스 포털",
+    "reason": "Sports news portal",
     "detected_keywords": []
   }
 ]
 ```
 
-**6단계 (JSONStorage - 불법 사이트만 저장):**
+**Stage 6 (JSONStorage — saves illegal sites only):**
 ```json
 {
   "url": "https://gambling-site.com",
-  "keyword_used": "스포츠 베팅",
+  "keyword_used": "sports betting",
   "collected_at": "2024-11-22T14:30:00",
   "is_illegal": true,
   "gemini_confidence": 0.92,
-  "gemini_reason": "불법 스포츠 베팅 서비스 제공",
+  "gemini_reason": "Provides illegal sports betting service",
   "detected_keywords": ["sports betting", "deposit", "live casino"]
 }
 ```
 
-**7단계 (DatabaseManager):**
+**Stage 7 (DatabaseManager):**
 ```sql
 INSERT INTO gambling_urls (url, keyword_used, collected_at, is_illegal, ...)
-VALUES ('https://gambling-site.com', '스포츠 베팅', '2024-11-22 14:30:00', true, ...);
+VALUES ('https://gambling-site.com', 'sports betting', '2024-11-22 14:30:00', true, ...);
 ```
 
 ---
 
-## 6. 기술적 혁신 및 특징
+## 6. Technical Innovation and Features
 
-### 6.1 Selenium 폴백 메커니즘
+### 6.1 Selenium Fallback Mechanism
 
-본 시스템의 가장 큰 기술적 차별점은 **이중 폴백 메커니즘**입니다.
+The greatest technical differentiator of this system is the **dual fallback mechanism**.
 
 ```mermaid
 graph TD
-    A[검색 시작] --> B{Selenium<br/>사용 가능?}
-    B -->|Yes| C[Chrome WebDriver 초기화]
-    B -->|No| D[Requests 라이브러리 사용]
+    A[Start Search] --> B{Selenium<br/>Available?}
+    B -->|Yes| C[Initialize Chrome WebDriver]
+    B -->|No| D[Use Requests Library]
     
-    C --> E[Selenium으로 검색]
-    D --> F[HTTP 요청으로 검색]
+    C --> E[Search with Selenium]
+    D --> F[Search with HTTP Request]
     
-    E --> G{성공?}
-    F --> H{성공?}
+    E --> G{Success?}
+    F --> H{Success?}
     
-    G -->|Yes| I[검색 결과 반환]
-    G -->|No| J[Requests로 폴백]
+    G -->|Yes| I[Return Search Results]
+    G -->|No| J[Fall back to Requests]
     H -->|Yes| I
-    H -->|No| K[에러 로그]
+    H -->|No| K[Log Error]
     
     J --> F
     
@@ -820,77 +820,77 @@ graph TD
     style K fill:#e57373,stroke:#c62828,stroke-width:2px,color:#000
 ```
 
-#### 6.1.1 왜 폴백 메커니즘이 필요한가?
+#### 6.1.1 Why Is a Fallback Mechanism Necessary?
 
-1. **환경 호환성**: WSL, Docker 등 GUI 없는 환경에서도 작동
-2. **의존성 문제**: ChromeDriver 설치 실패 시에도 동작
-3. **리소스 효율**: Selenium이 과도한 리소스 사용 시 Requests로 전환
-4. **안정성**: 한 방법의 실패가 전체 시스템 중단으로 이어지지 않음
+1. **Environment Compatibility**: Works in environments without a GUI such as WSL and Docker
+2. **Dependency Issues**: Functions even when ChromeDriver installation fails
+3. **Resource Efficiency**: Switches to Requests when Selenium uses excessive resources
+4. **Stability**: Failure of one method does not lead to full system shutdown
 
-#### 6.1.2 구현 세부사항
+#### 6.1.2 Implementation Details
 
 ```python
-# Selenium 우선 시도
+# Attempt Selenium first
 try:
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    # ... Selenium으로 검색
+    # ... Search with Selenium
 except Exception as e:
     print(f"Selenium failed: {e}")
-    # Requests로 폴백
+    # Fall back to Requests
     response = requests.get(search_url, headers=headers)
-    # ... HTTP 요청으로 검색
+    # ... Search with HTTP request
 ```
 
 ---
 
-### 6.2 Gemini AI 통합
+### 6.2 Gemini AI Integration
 
-#### 6.2.1 왜 Gemini를 선택했는가?
+#### 6.2.1 Why Was Gemini Chosen?
 
-| 모델 | 장점 | 단점 | 선택 여부 |
-|------|------|------|-----------|
-| **Gemini 2.5 Flash** | 빠른 응답, 무료 API, HTML 분석 우수 | - | ✅ **선택** |
-| GPT-4 | 높은 정확도 | 비용 높음, 속도 느림 | ❌ |
-| Claude | 긴 컨텍스트 | API 접근성 제한 | ❌ |
-| Open-source LLM | 무료 | 정확도 낮음, 인프라 필요 | ❌ |
+| Model | Advantages | Disadvantages | Selected |
+|-------|-----------|---------------|----------|
+| **Gemini 2.5 Flash** | Fast response, free API, excellent HTML analysis | - | ✅ **Selected** |
+| GPT-4 | High accuracy | High cost, slow | ❌ |
+| Claude | Long context | Limited API access | ❌ |
+| Open-source LLM | Free | Low accuracy, requires infrastructure | ❌ |
 
-#### 6.2.2 프롬프트 엔지니어링 전략
+#### 6.2.2 Prompt Engineering Strategy
 
-**명확한 역할 부여:**
+**Clear Role Assignment:**
 ```
-당신은 불법 온라인 도박 사이트를 탐지하는 전문가입니다.
+You are an expert in detecting illegal online gambling sites.
 ```
 
-**구체적인 판단 기준 제시:**
+**Specific Judgment Criteria:**
 ```
-판단 기준:
-1. 베팅/도박 관련 키워드
-2. 결제 수단 제공
-3. 로그인/회원가입 시스템
+Judgment Criteria:
+1. Betting/gambling-related keywords
+2. Payment methods provided
+3. Login/registration system
 ...
 ```
 
-**출력 형식 명확화:**
+**Clear Output Format:**
 ```
-응답 형식 (JSON만 반환):
+Response Format (return JSON only):
 {
   "is_illegal": true/false,
   ...
 }
 ```
 
-#### 6.2.3 정확도 향상 기법
+#### 6.2.3 Accuracy Improvement Techniques
 
-1. **컨텍스트 제공**: URL과 HTML 모두 전달하여 맥락 이해
-2. **다국어 키워드**: 한국어, 영어, 일본어 등 다양한 언어의 도박 용어 명시
-3. **신뢰도 점수**: 모델이 자신의 판단에 신뢰도를 부여하도록 요구
+1. **Providing Context**: Passing both URL and HTML for contextual understanding
+2. **Multilingual Keywords**: Explicitly specifying gambling terms in various languages such as Korean, English, Japanese
+3. **Confidence Score**: Requiring the model to assign a confidence level to its own judgment
 
 ---
 
-### 6.3 봇 탐지 회피 전략
+### 6.3 Bot Detection Evasion Strategy
 
-#### 6.3.1 User-Agent 랜덤화
+#### 6.3.1 User-Agent Randomization
 
 ```python
 user_agents = [
@@ -901,43 +901,43 @@ user_agents = [
 chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
 ```
 
-#### 6.3.2 자동화 플래그 제거
+#### 6.3.2 Removing Automation Flags
 
 ```python
-# WebDriver 감지 방지
+# Prevent WebDriver detection
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
-# JavaScript로 navigator.webdriver 속성 제거
+# Remove navigator.webdriver property via JavaScript
 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 ```
 
-#### 6.3.3 자연스러운 탐색 패턴
+#### 6.3.3 Natural Navigation Patterns
 
 ```python
-# 랜덤 딜레이
+# Random delay
 random_delay = random.uniform(2, 4)
 time.sleep(random_delay)
 
-# 실제 사용자 행동 모방
-link.click()  # 링크 클릭
-time.sleep(random.uniform(2, 3))  # 페이지 읽기 시간
-driver.back()  # 뒤로가기
+# Mimic real user behavior
+link.click()  # Click link
+time.sleep(random.uniform(2, 3))  # Reading time
+driver.back()  # Go back
 ```
 
 ---
 
-### 6.4 확장 가능한 모듈 설계
+### 6.4 Extensible Modular Design
 
-#### 6.4.1 플러그인 아키텍처
+#### 6.4.1 Plugin Architecture
 
-새로운 검색 엔진 추가 예시:
+Example of adding a new search engine:
 
 ```python
 # src/search_engines/naver_search.py
 class NaverSearch(SearchEngine):
     def search(self, keyword: str) -> str:
-        # Naver 검색 로직
+        # Naver search logic
         pass
 
 # src/crawler.py
@@ -947,16 +947,16 @@ elif settings["search_engine"] == "naver":
     self.search_engine = NaverSearch()
 ```
 
-#### 6.4.2 다중 AI 모델 지원 가능
+#### 6.4.2 Support for Multiple AI Models
 
 ```python
 # src/classifiers/openai_classifier.py
 class OpenAIClassifier(BaseClassifier):
     def classify(self, url: str, html: str) -> Dict:
-        # OpenAI API 로직
+        # OpenAI API logic
         pass
 
-# 설정 파일에서 모델 선택
+# Select model from configuration file
 if settings["classifier"] == "gemini":
     classifier = GeminiClassifier()
 elif settings["classifier"] == "openai":
@@ -965,24 +965,24 @@ elif settings["classifier"] == "openai":
 
 ---
 
-## 7. 성능 및 확장성
+## 7. Performance and Scalability
 
-### 7.1 현재 성능 지표
+### 7.1 Current Performance Metrics
 
-| 지표 | 값 | 설명 |
-|------|-----|------|
-| **검색 속도** | 5-10초/키워드 | Google 검색 + HTML 수집 |
-| **분류 속도** | 2-3초/URL | Gemini API 호출 |
-| **처리량** | ~100 URL/시간 | 전체 파이프라인 |
-| **메모리 사용** | ~200MB | Selenium + Python 프로세스 |
-| **API 비용** | ~$0.02/100 URL | Gemini 2.5 Flash 무료 할당량 |
+| Metric | Value | Description |
+|--------|-------|-------------|
+| **Search Speed** | 5–10 seconds/keyword | Google search + HTML collection |
+| **Classification Speed** | 2–3 seconds/URL | Gemini API call |
+| **Throughput** | ~100 URLs/hour | Full pipeline |
+| **Memory Usage** | ~200MB | Selenium + Python process |
+| **API Cost** | ~$0.02/100 URLs | Gemini 2.5 Flash free quota |
 
-### 7.2 확장성 전략
+### 7.2 Scalability Strategy
 
-#### 7.2.1 수평적 확장 (Horizontal Scaling)
+#### 7.2.1 Horizontal Scaling
 
 ```python
-# 병렬 처리 예시 (향후 구현 가능)
+# Parallel processing example (can be implemented in the future)
 from multiprocessing import Pool
 
 def process_keyword(keyword):
@@ -994,77 +994,77 @@ with Pool(processes=4) as pool:
     pool.map(process_keyword, keywords)
 ```
 
-**예상 성능 향상:**
-- 단일 프로세스: 100 URL/시간
-- 4 프로세스: **400 URL/시간** (4배 향상)
+**Expected Performance Improvement:**
+- Single process: 100 URLs/hour
+- 4 processes: **400 URLs/hour** (4x improvement)
 
-#### 7.2.2 데이터베이스 인덱싱
+#### 7.2.2 Database Indexing
 
 ```sql
--- B-tree 인덱스: URL 검색 최적화
+-- B-tree index: URL search optimization
 CREATE INDEX idx_url ON gambling_urls(url);
--- 쿼리 시간: ~50ms (인덱스 없음) → ~2ms (인덱스 있음)
+-- Query time: ~50ms (without index) → ~2ms (with index)
 
--- GIN 인덱스: JSONB 키워드 검색 최적화
+-- GIN index: JSONB keyword search optimization
 CREATE INDEX idx_keywords ON gambling_urls USING GIN(detected_keywords);
--- 키워드 검색 시간: ~500ms → ~10ms
+-- Keyword search time: ~500ms → ~10ms
 ```
 
-#### 7.2.3 캐싱 전략
+#### 7.2.3 Caching Strategy
 
 ```python
-# URL 중복 확인 캐시
-existing_urls_cache = set()  # 메모리 상 캐시
+# URL deduplication cache
+existing_urls_cache = set()  # In-memory cache
 
-# 데이터베이스 쿼리 대신 캐시 확인
+# Check cache instead of database query
 if url in existing_urls_cache:
     print(f"Skipping duplicate URL: {url}")
     continue
 ```
 
-### 7.3 대용량 처리 최적화
+### 7.3 Large-Volume Processing Optimization
 
-#### 7.3.1 배치 처리
+#### 7.3.1 Batch Processing
 
 ```python
-# 단일 INSERT (느림)
+# Single INSERT (slow)
 for url_data in url_list:
-    db.insert_url(url_data)  # N번의 쿼리
+    db.insert_url(url_data)  # N queries
 
-# 배치 INSERT (빠름)
-db.batch_insert(url_list)  # 1번의 쿼리
+# Batch INSERT (fast)
+db.batch_insert(url_list)  # 1 query
 ```
 
-**성능 비교:**
-- 단일 INSERT: 1000개 URL → ~30초
-- 배치 INSERT: 1000개 URL → **~3초** (10배 빠름)
+**Performance Comparison:**
+- Single INSERT: 1,000 URLs → ~30 seconds
+- Batch INSERT: 1,000 URLs → **~3 seconds** (10x faster)
 
-#### 7.3.2 HTML 크기 제한
+#### 7.3.2 HTML Size Limit
 
 ```python
-# Gemini API 입력 크기 제한
+# Gemini API input size limit
 if len(html_content) > 50000:
     html_content = html_content[:50000]
 ```
 
-**이점:**
-- API 비용 절감
-- 응답 속도 향상 (긴 HTML 처리 시간 감소)
-- 에러 가능성 감소
+**Benefits:**
+- Reduced API costs
+- Improved response speed (less time processing long HTML)
+- Reduced error likelihood
 
 ---
 
-## 8. 보안 및 신뢰성
+## 8. Security and Reliability
 
-### 8.1 환경 변수를 통한 인증 정보 관리
+### 8.1 Credential Management via Environment Variables
 
-#### 8.1.1 `.env` 파일 구조
+#### 8.1.1 `.env` File Structure
 
 ```bash
 # Google Gemini API Key
 GEMINI_API_KEY=AIzaSy...
 
-# Supabase PostgreSQL 연결 정보
+# Supabase PostgreSQL connection info
 DB_USER=postgres
 DB_PASSWORD=your_secure_password
 DB_HOST=db.xxx.supabase.co
@@ -1072,16 +1072,16 @@ DB_PORT=5432
 DB_NAME=postgres
 ```
 
-#### 8.1.2 보안 모범 사례
+#### 8.1.2 Security Best Practices
 
-1. **`.env` 파일을 Git에서 제외**
+1. **Exclude `.env` file from Git**
 ```gitignore
 # .gitignore
 .env
 *.env
 ```
 
-2. **환경 변수 자동 로드**
+2. **Automatic environment variable loading**
 ```python
 from dotenv import load_dotenv
 load_dotenv()
@@ -1091,9 +1091,9 @@ if not api_key:
     raise ValueError("API key not found")
 ```
 
-3. **템플릿 제공**
+3. **Provide a template**
 ```bash
-# env_template.txt (Git에 커밋됨)
+# env_template.txt (committed to Git)
 GEMINI_API_KEY=your_api_key_here
 DB_USER=your_database_user
 ...
@@ -1101,20 +1101,20 @@ DB_USER=your_database_user
 
 ---
 
-### 8.2 에러 처리 및 복구 메커니즘
+### 8.2 Error Handling and Recovery Mechanisms
 
-#### 8.2.1 계층별 에러 처리
+#### 8.2.1 Layer-by-Layer Error Handling
 
-**1. SearchEngine 계층:**
+**1. SearchEngine Layer:**
 ```python
 try:
     driver.get(url)
 except Exception as e:
     print(f"Failed to load URL: {e}")
-    return None  # 다음 URL로 계속 진행
+    return None  # Continue to next URL
 ```
 
-**2. GeminiClassifier 계층:**
+**2. GeminiClassifier Layer:**
 ```python
 try:
     response = self.model.generate_content(prompt)
@@ -1123,23 +1123,23 @@ except Exception as e:
         "url": url,
         "is_illegal": False,
         "error": str(e)
-    }  # 에러를 반환값에 포함
+    }  # Include error in return value
 ```
 
-**3. Crawler 계층:**
+**3. Crawler Layer:**
 ```python
 for keyword in keywords:
     try:
         self.crawl_keyword(keyword)
     except Exception as e:
         print(f"Error processing {keyword}: {e}")
-        continue  # 다음 키워드로 계속 진행
+        continue  # Continue to next keyword
 ```
 
-#### 8.2.2 우아한 성능 저하 (Graceful Degradation)
+#### 8.2.2 Graceful Degradation
 
 ```python
-# Gemini 분류기 초기화 실패 시
+# When Gemini classifier initialization fails
 try:
     self.classifier = GeminiClassifier()
     self.use_classifier = True
@@ -1147,44 +1147,44 @@ except ValueError as e:
     print(f"Warning: Gemini classifier not initialized - {e}")
     self.classifier = None
     self.use_classifier = False
-    # 분류 없이 계속 진행 (URL만 수집)
+    # Continue without classification (collect URLs only)
 ```
 
 ---
 
-### 8.3 데이터 무결성 보장
+### 8.3 Data Integrity Assurance
 
-#### 8.3.1 데이터베이스 제약 조건
+#### 8.3.1 Database Constraints
 
 ```sql
 CREATE TABLE gambling_urls (
     id SERIAL PRIMARY KEY,
-    url TEXT NOT NULL UNIQUE,  -- 중복 방지
+    url TEXT NOT NULL UNIQUE,  -- Prevent duplicates
     keyword_used TEXT NOT NULL,
-    is_illegal BOOLEAN NOT NULL,  -- NULL 불가
+    is_illegal BOOLEAN NOT NULL,  -- Cannot be NULL
     ...
 );
 ```
 
-#### 8.3.2 트랜잭션 관리
+#### 8.3.2 Transaction Management
 
 ```python
 try:
     cursor.execute("BEGIN")
-    # ... 여러 INSERT 작업
+    # ... Multiple INSERT operations
     connection.commit()
 except Exception as e:
     connection.rollback()
     print(f"Transaction rolled back: {e}")
 ```
 
-#### 8.3.3 자동 타임스탬프
+#### 8.3.3 Automatic Timestamps
 
 ```sql
--- created_at: 최초 생성 시간 (자동)
+-- created_at: Initial creation time (automatic)
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
--- updated_at: 수정 시간 (트리거로 자동 업데이트)
+-- updated_at: Modification time (auto-updated by trigger)
 CREATE TRIGGER update_gambling_urls_updated_at
     BEFORE UPDATE ON gambling_urls
     FOR EACH ROW
@@ -1193,58 +1193,58 @@ CREATE TRIGGER update_gambling_urls_updated_at
 
 ---
 
-## 9. 사회적 가치 및 영향
+## 9. Social Value and Impact
 
-### 9.1 불법 도박 근절 기여
+### 9.1 Contribution to Eradicating Illegal Gambling
 
-#### 9.1.1 조기 탐지의 중요성
+#### 9.1.1 Importance of Early Detection
 
-**신규 사이트 탐지 시간:**
-- 기존 방식 (수동 신고): 평균 **2-4주**
-- 본 시스템: **실시간** (크롤링 주기에 따라)
+**New Site Detection Time:**
+- Existing method (manual reporting): Average **2–4 weeks**
+- This system: **Real-time** (dependent on crawling cycle)
 
-**피해 규모 감소:**
+**Reduction in Scale of Harm:**
 ```
-피해 금액 = 사이트 활동 기간 × 일평균 피해액
+Harm Amount = Site Activity Period × Average Daily Harm
 
-기존 방식: 30일 × 1천만원 = 3억원
-본 시스템: 1일 × 1천만원 = 1천만원
+Existing method: 30 days × ₩10M = ₩300M
+This system: 1 day × ₩10M = ₩10M
 
-→ 사이트당 2.9억원 피해 감소
+→ ₩290M reduction in harm per site
 ```
 
-만약 연간 1,000개의 신규 사이트를 조기 탐지한다면:
-- **연간 피해 감소액**: 2.9억원 × 1,000 = **2,900억원**
+If 1,000 new sites are detected early annually:
+- **Annual Harm Reduction**: ₩290M × 1,000 = **₩290 billion**
 
-#### 9.1.2 정확도 향상의 영향
+#### 9.1.2 Impact of Improved Accuracy
 
-**오탐률 감소:**
-- 기존 키워드 기반: 오탐률 ~30%
-- AI 기반 (본 시스템): 오탐률 ~5%
+**Reduced False Positive Rate:**
+- Existing keyword-based: ~30% false positive rate
+- AI-based (this system): ~5% false positive rate
 
-**영향:**
-- 합법 사이트 오차단 방지 → 표현의 자유 보호
-- 규제 기관의 신뢰도 향상
-- 효율적인 리소스 활용
+**Impact:**
+- Prevents wrongful blocking of legal sites → Protects freedom of expression
+- Improves credibility of regulatory agencies
+- Efficient resource utilization
 
 ---
 
-### 9.2 데이터 기반 정책 지원
+### 9.2 Data-Driven Policy Support
 
-#### 9.2.1 축적 가능한 데이터
+#### 9.2.1 Accumulable Data
 
-본 시스템은 다음과 같은 귀중한 데이터를 제공합니다:
+This system provides the following valuable data:
 
-1. **시간별 추이**
+1. **Trends Over Time**
 ```sql
 SELECT DATE(collected_at), COUNT(*)
 FROM gambling_urls
 WHERE is_illegal = true
 GROUP BY DATE(collected_at);
 ```
-→ 불법 사이트 생성 패턴 파악
+→ Identify patterns in illegal site creation
 
-2. **키워드 분석**
+2. **Keyword Analysis**
 ```sql
 SELECT keyword_used, COUNT(*)
 FROM gambling_urls
@@ -1253,9 +1253,9 @@ GROUP BY keyword_used
 ORDER BY COUNT(*) DESC
 LIMIT 10;
 ```
-→ 가장 효과적인 유인 키워드 파악
+→ Identify the most effective lure keywords
 
-3. **도메인 패턴 분석**
+3. **Domain Pattern Analysis**
 ```sql
 SELECT 
     SUBSTRING(url FROM 'https?://([^/]+)') as domain,
@@ -1264,159 +1264,159 @@ FROM gambling_urls
 WHERE is_illegal = true
 GROUP BY domain;
 ```
-→ 동일 운영자가 관리하는 사이트 클러스터 파악
+→ Identify clusters of sites managed by the same operator
 
-#### 9.2.2 정책 수립 지원
+#### 9.2.2 Policy Development Support
 
-**활용 사례:**
-1. **검색 엔진 협력**: Google, Naver 등에 탐지 데이터 제공
-2. **ISP 차단 리스트**: 통신사 DNS 차단 목록 자동 생성
-3. **교육 자료**: 청소년 교육용 실제 사례 데이터
-4. **입법 근거**: 불법 도박 규제 강화를 위한 통계 자료
+**Use Cases:**
+1. **Search Engine Cooperation**: Provide detection data to Google, Naver, etc.
+2. **ISP Block Lists**: Automatically generate DNS block lists for ISPs
+3. **Educational Materials**: Real case data for youth education
+4. **Legislative Basis**: Statistical data for strengthening illegal gambling regulations
 
 ---
 
-### 9.3 확장 가능성 (다른 불법 콘텐츠 탐지)
+### 9.3 Expandability (Detection of Other Illegal Content)
 
-본 시스템의 아키텍처는 불법 도박뿐만 아니라 다양한 불법 콘텐츠 탐지에 활용 가능합니다:
+The architecture of this system can be applied to the detection of various types of illegal content beyond illegal gambling:
 
-#### 9.3.1 확장 가능 분야
+#### 9.3.1 Expandable Fields
 
-| 분야 | 키워드 예시 | AI 프롬프트 수정 |
-|------|------------|-----------------|
-| **불법 대출** | "무직자 대출", "신불자 대출" | "불법 대출 사이트 판별" |
-| **피싱 사이트** | "국세청 환급", "은행 보안" | "피싱 사이트 특징 분석" |
-| **마약 판매** | "대마초 구매", "필로폰" | "마약 거래 사이트 판별" |
-| **성착취물** | (특정 키워드) | "불법 성착취물 판별" |
-| **해적판** | "영화 무료 다운로드" | "저작권 침해 사이트 판별" |
+| Field | Example Keywords | AI Prompt Modification |
+|-------|-----------------|----------------------|
+| **Illegal Loans** | "unemployed loan", "blacklisted loan" | "Identify illegal loan sites" |
+| **Phishing Sites** | "tax refund", "bank security" | "Analyze phishing site characteristics" |
+| **Drug Sales** | "buy marijuana", "methamphetamine" | "Identify drug trafficking sites" |
+| **Sexual Exploitation Content** | (specific keywords) | "Identify illegal sexual exploitation content" |
+| **Piracy** | "free movie download" | "Identify copyright infringement sites" |
 
-#### 9.3.2 최소한의 코드 수정으로 확장
+#### 9.3.2 Expansion with Minimal Code Changes
 
 ```python
-# keywords.json 수정
+# Modify keywords.json
 {
-  "keywords": ["무직자", "대출", "신불자"]
+  "keywords": ["unemployed", "loan", "blacklisted"]
 }
 
-# gemini_classifier.py의 프롬프트만 수정
-prompt = f"""당신은 불법 대출 사이트를 탐지하는 전문가입니다.
-판단 기준:
-1. 과도한 이자율 (법정 최고금리 20% 초과)
-2. 신용불량자 대출 광고
-3. 선이자 또는 수수료 요구
+# Modify only the prompt in gemini_classifier.py
+prompt = f"""You are an expert in detecting illegal loan sites.
+Judgment Criteria:
+1. Excessive interest rates (exceeding the legal maximum of 20%)
+2. Advertising loans for people with bad credit
+3. Requiring upfront interest or fees
 ..."""
 ```
 
 ---
 
-### 9.4 사회적 임팩트 측정
+### 9.4 Measuring Social Impact
 
-#### 9.4.1 정량적 지표
+#### 9.4.1 Quantitative Metrics
 
-| 지표 | 목표치 (1년) | 측정 방법 |
-|------|-------------|----------|
-| 탐지된 불법 사이트 수 | 10,000+ | DB 쿼리 |
-| 조기 차단된 사이트 수 | 5,000+ | 정부 기관 협력 |
-| 추정 피해 금액 감소 | 1조원+ | 차단 사이트 × 평균 피해액 |
-| 도박 중독 상담 건수 감소 | 10% | 보건복지부 통계 |
+| Metric | Target (1 Year) | Measurement Method |
+|--------|-----------------|--------------------|
+| Number of illegal sites detected | 10,000+ | DB query |
+| Number of sites blocked early | 5,000+ | Cooperation with government agencies |
+| Estimated reduction in harm | ₩1T+ | Blocked sites × average harm amount |
+| Reduction in gambling addiction counseling cases | 10% | Ministry of Health and Welfare statistics |
 
-#### 9.4.2 정성적 영향
+#### 9.4.2 Qualitative Impact
 
-1. **개인 및 가족**
-   - 도박 중독 조기 개입 기회 증가
-   - 가정 경제 보호
-   - 청소년 도박 접근성 감소
+1. **Individuals and Families**
+   - Increased opportunities for early intervention in gambling addiction
+   - Protection of household finances
+   - Reduced youth access to gambling
 
-2. **사회**
-   - 불법 도박 시장 위축
-   - 2차 범죄 (대출, 사기) 감소
-   - 사회 안전망 강화
+2. **Society**
+   - Shrinkage of the illegal gambling market
+   - Reduction in secondary crimes (loans, fraud)
+   - Strengthening of the social safety net
 
-3. **국가**
-   - 세수 누락 방지 (합법 도박으로 유도)
-   - 공공 보건 비용 감소
-   - 국제 사회에서 디지털 거버넌스 모범 사례
+3. **The Nation**
+   - Prevention of tax revenue loss (diverting to legal gambling)
+   - Reduction in public health costs
+   - Model case for digital governance in the international community
 
 ---
 
-## 10. 기술 스택
+## 10. Technology Stack
 
-### 10.1 프로그래밍 언어 및 주요 라이브러리
+### 10.1 Programming Language and Key Libraries
 
-#### 10.1.1 핵심 기술
+#### 10.1.1 Core Technologies
 
-| 카테고리 | 기술 | 버전 | 용도 |
-|----------|------|------|------|
-| **언어** | Python | 3.12+ | 전체 시스템 |
-| **웹 자동화** | Selenium | 4.15.0+ | 브라우저 제어 |
-| **HTML 파싱** | BeautifulSoup4 | 4.12.0+ | HTML 파싱 |
-| **HTTP 클라이언트** | Requests | 2.31.0+ | HTTP 요청 |
+| Category | Technology | Version | Purpose |
+|----------|-----------|---------|---------|
+| **Language** | Python | 3.12+ | Entire system |
+| **Web Automation** | Selenium | 4.15.0+ | Browser control |
+| **HTML Parsing** | BeautifulSoup4 | 4.12.0+ | HTML parsing |
+| **HTTP Client** | Requests | 2.31.0+ | HTTP requests |
 | **AI/ML** | google-generativeai | latest | Gemini API |
-| **데이터베이스** | psycopg2-binary | 2.9.0+ | PostgreSQL 연결 |
-| **환경 변수** | python-dotenv | 1.0.0+ | .env 파일 로드 |
-| **WebDriver** | webdriver-manager | 4.0.0+ | ChromeDriver 관리 |
+| **Database** | psycopg2-binary | 2.9.0+ | PostgreSQL connection |
+| **Environment Variables** | python-dotenv | 1.0.0+ | Load .env file |
+| **WebDriver** | webdriver-manager | 4.0.0+ | ChromeDriver management |
 
-#### 10.1.2 의존성 트리
+#### 10.1.2 Dependency Tree
 
 ```
 illicit-gambling-detector
-├── selenium (웹 자동화)
-│   └── webdriver-manager (드라이버 자동 설치)
-├── beautifulsoup4 (HTML 파싱)
-├── requests (HTTP 클라이언트)
+├── selenium (web automation)
+│   └── webdriver-manager (automatic driver installation)
+├── beautifulsoup4 (HTML parsing)
+├── requests (HTTP client)
 ├── google-generativeai (Gemini AI)
 ├── psycopg2-binary (PostgreSQL)
-└── python-dotenv (환경 변수)
+└── python-dotenv (environment variables)
 ```
 
 ---
 
-### 10.2 외부 API 및 서비스
+### 10.2 External APIs and Services
 
 #### 10.2.1 Google Search
-- **용도**: 키워드 검색
-- **접근 방식**: Selenium (동적 렌더링)
-- **제한사항**: 봇 탐지 시스템 (→ 회피 전략 필수)
+- **Purpose**: Keyword search
+- **Access Method**: Selenium (dynamic rendering)
+- **Limitations**: Bot detection system (→ evasion strategy required)
 
 #### 10.2.2 Google Gemini 2.5 Flash
-- **용도**: AI 기반 사이트 분류
-- **모델**: `gemini-2.5-flash`
-- **비용**: 무료 할당량 (분당 15 요청, 일일 1,500 요청)
-- **입력**: URL + HTML 콘텐츠 (최대 50,000자)
-- **출력**: JSON 형식 분류 결과
+- **Purpose**: AI-based site classification
+- **Model**: `gemini-2.5-flash`
+- **Cost**: Free quota (15 requests/minute, 1,500 requests/day)
+- **Input**: URL + HTML content (up to 50,000 characters)
+- **Output**: JSON-format classification result
 
 #### 10.2.3 Supabase (PostgreSQL)
-- **용도**: 영구 데이터 저장
-- **특징**: 
-  - PostgreSQL 기반 (오픈소스)
-  - RESTful API 제공
-  - 실시간 구독 지원
-  - 무료 티어: 500MB 저장소, 2GB 전송
+- **Purpose**: Persistent data storage
+- **Features**: 
+  - PostgreSQL-based (open source)
+  - RESTful API provided
+  - Real-time subscription support
+  - Free tier: 500MB storage, 2GB transfer
 
 ---
 
-### 10.3 인프라 요구사항
+### 10.3 Infrastructure Requirements
 
-#### 10.3.1 최소 사양
+#### 10.3.1 Minimum Specifications
 
-| 항목 | 최소 사양 | 권장 사양 |
-|------|----------|----------|
-| **CPU** | 2 코어 | 4 코어 |
+| Item | Minimum | Recommended |
+|------|---------|-------------|
+| **CPU** | 2 cores | 4 cores |
 | **RAM** | 2GB | 4GB |
-| **저장소** | 1GB | 10GB |
-| **네트워크** | 10Mbps | 100Mbps |
+| **Storage** | 1GB | 10GB |
+| **Network** | 10Mbps | 100Mbps |
 | **OS** | Windows 10, macOS 10.15, Ubuntu 20.04 | Any |
 
-#### 10.3.2 소프트웨어 의존성
+#### 10.3.2 Software Dependencies
 
-1. **Python 3.12+**: 필수
-2. **Chrome/Chromium**: Selenium용 (필수)
-3. **ChromeDriver**: webdriver-manager가 자동 설치
-4. **PostgreSQL**: Supabase 사용 시 불필요 (클라우드)
+1. **Python 3.12+**: Required
+2. **Chrome/Chromium**: For Selenium (required)
+3. **ChromeDriver**: Automatically installed by webdriver-manager
+4. **PostgreSQL**: Not required when using Supabase (cloud)
 
-#### 10.3.3 배포 환경
+#### 10.3.3 Deployment Environments
 
-**로컬 실행:**
+**Local Execution:**
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -1424,7 +1424,7 @@ pip install -e .
 python main.py
 ```
 
-**Docker 배포 (향후 구현 가능):**
+**Docker Deployment (can be implemented in the future):**
 ```dockerfile
 FROM python:3.12-slim
 RUN apt-get update && apt-get install -y chromium chromium-driver
@@ -1434,245 +1434,244 @@ RUN pip install -e .
 CMD ["python", "main.py"]
 ```
 
-**클라우드 배포 옵션:**
+**Cloud Deployment Options:**
 - AWS EC2 + RDS
 - Google Cloud Run + Cloud SQL
 - Azure VM + Azure Database
 
 ---
 
-### 10.4 개발 도구
+### 10.4 Development Tools
 
-| 도구 | 용도 |
-|------|------|
-| **Git** | 버전 관리 |
+| Tool | Purpose |
+|------|---------|
+| **Git** | Version control |
 | **VS Code / PyCharm** | IDE |
-| **pytest** | 단위 테스트 (향후 구현) |
-| **Black** | 코드 포매팅 (향후 구현) |
-| **Flake8** | 린팅 (향후 구현) |
+| **pytest** | Unit testing (future implementation) |
+| **Black** | Code formatting (future implementation) |
+| **Flake8** | Linting (future implementation) |
 
 ---
 
-## 11. 향후 발전 방향
+## 11. Future Development Roadmap
 
-### 11.1 단기 개선 계획 (3-6개월)
+### 11.1 Short-Term Improvement Plans (3–6 Months)
 
-#### 11.1.1 성능 최적화
-- [ ] **병렬 처리 구현**: `multiprocessing` 또는 `asyncio`로 동시 크롤링
-- [ ] **캐싱 레이어 추가**: Redis를 사용한 URL 중복 확인 캐시
-- [ ] **배치 처리 최적화**: 데이터베이스 INSERT 배치 크기 조정
+#### 11.1.1 Performance Optimization
+- [ ] **Implement Parallel Processing**: Concurrent crawling with `multiprocessing` or `asyncio`
+- [ ] **Add Caching Layer**: URL deduplication cache using Redis
+- [ ] **Optimize Batch Processing**: Adjust database INSERT batch size
 
-#### 11.1.2 기능 확장
-- [ ] **다중 검색 엔진 지원**: Naver, Bing, DuckDuckGo 추가
-- [ ] **스케줄링 기능**: `APScheduler`로 주기적 자동 실행
-- [ ] **알림 시스템**: 새로운 불법 사이트 발견 시 Slack/Email 알림
-- [ ] **웹 대시보드**: Streamlit 또는 Flask로 통계 시각화
+#### 11.1.2 Feature Expansion
+- [ ] **Multi-Search Engine Support**: Add Naver, Bing, DuckDuckGo
+- [ ] **Scheduling**: Periodic automated execution with `APScheduler`
+- [ ] **Notification System**: Slack/Email alerts when new illegal sites are found
+- [ ] **Web Dashboard**: Statistics visualization with Streamlit or Flask
 
-#### 11.1.3 테스트 및 품질
-- [ ] **단위 테스트**: `pytest`로 각 모듈 테스트 커버리지 80%+
-- [ ] **통합 테스트**: E2E 테스트 시나리오 구현
-- [ ] **CI/CD**: GitHub Actions로 자동 테스트 및 배포
+#### 11.1.3 Testing and Quality
+- [ ] **Unit Tests**: 80%+ test coverage per module with `pytest`
+- [ ] **Integration Tests**: Implement E2E test scenarios
+- [ ] **CI/CD**: Automated testing and deployment with GitHub Actions
 
 ---
 
-### 11.2 중장기 확장 계획 (6-12개월)
+### 11.2 Mid-to-Long-Term Expansion Plans (6–12 Months)
 
-#### 11.2.1 AI 모델 고도화
+#### 11.2.1 AI Model Advancement
 
-**1. 자체 분류 모델 학습**
+**1. Training a Custom Classification Model**
 ```python
-# 향후 구현 예시
+# Future implementation example
 from transformers import BertForSequenceClassification
 
 class CustomClassifier:
     def __init__(self):
         self.model = BertForSequenceClassification.from_pretrained(
-            "gambling-detector-v1"  # 자체 학습 모델
+            "gambling-detector-v1"  # Custom trained model
         )
     
     def classify(self, html: str) -> Dict:
         # ...
 ```
 
-**장점:**
-- Gemini API 비용 절감
-- 도메인 특화 정확도 향상
-- 오프라인 실행 가능
+**Advantages:**
+- Reduced Gemini API costs
+- Improved domain-specific accuracy
+- Offline execution possible
 
-**필요 자원:**
-- 학습 데이터: 10,000+ 라벨링된 샘플
-- 컴퓨팅: GPU 서버 (A100 또는 유사)
-- 인력: ML 엔지니어 1-2명
+**Required Resources:**
+- Training data: 10,000+ labeled samples
+- Computing: GPU server (A100 or similar)
+- Personnel: 1–2 ML engineers
 
-#### 11.2.2 깊이 있는 크롤링
+#### 11.2.2 Deep Crawling
 
-**현재**: 검색 결과 첫 페이지만 수집  
-**향후**: 사이트 내부 페이지도 탐색
+**Current**: Collects only the first page of search results  
+**Future**: Also explores pages within sites
 
 ```python
 class DeepCrawler:
     def crawl_site(self, url: str, max_depth: int = 3):
-        # 사이트 내부 링크 재귀적 탐색
-        # robots.txt 준수
-        # 페이지 중요도 기반 우선순위 큐
+        # Recursively explore internal links of the site
+        # Respect robots.txt
+        # Priority queue based on page importance
 ```
 
-**활용:**
-- 사이트 구조 분석
-- 숨겨진 페이지 발견 (회원 전용 콘텐츠 등)
-- 운영자 정보 추출
+**Applications:**
+- Analyze site structure
+- Discover hidden pages (e.g., member-only content)
+- Extract operator information
 
-#### 11.2.3 소셜 미디어 통합
+#### 11.2.3 Social Media Integration
 
 ```python
 class SocialMediaCrawler:
     def crawl_telegram(self, keywords: List[str]):
-        # Telegram 채널/그룹 검색
+        # Search Telegram channels/groups
         pass
     
     def crawl_twitter(self, keywords: List[str]):
-        # Twitter(X) 계정 검색
+        # Search Twitter (X) accounts
         pass
 ```
 
-**이유:**  
-불법 도박 사이트는 검색 엔진보다 **소셜 미디어**에서 더 적극적으로 홍보됩니다.
+**Rationale:**  
+Illegal gambling sites are more aggressively promoted through **social media** than search engines.
 
 ---
 
-### 11.3 연구 발전 방향
+### 11.3 Research Development Directions
 
-#### 11.3.1 학술 연구 주제
+#### 11.3.1 Academic Research Topics
 
-1. **패턴 분석 연구**
-   - 불법 도박 사이트의 SEO 전략 분석
-   - 도메인 네이밍 패턴 머신러닝 모델
-   - 운영자 네트워크 그래프 분석
+1. **Pattern Analysis Research**
+   - Analysis of SEO strategies of illegal gambling sites
+   - Machine learning model for domain naming patterns
+   - Operator network graph analysis
 
-2. **AI 윤리 연구**
-   - AI 기반 콘텐츠 규제의 표현의 자유 균형
-   - 오탐으로 인한 피해 최소화 방안
-   - 투명한 AI 의사결정 시스템 설계
+2. **AI Ethics Research**
+   - Balancing AI-based content regulation with freedom of expression
+   - Minimizing harm from false positives
+   - Designing transparent AI decision-making systems
 
-3. **사회과학 연구**
-   - 불법 도박 사이트 차단의 중독률 영향 분석
-   - 키워드 기반 탐지의 사회경제적 효과 측정
+3. **Social Science Research**
+   - Analysis of the impact of blocking illegal gambling sites on addiction rates
+   - Measuring the socioeconomic effects of keyword-based detection
 
-#### 11.3.2 국제 협력
+#### 11.3.2 International Cooperation
 
-- **데이터 공유**: 국제 불법 도박 사이트 데이터베이스 구축
-- **기술 이전**: 개발도상국에 시스템 기술 이전
-- **표준화**: ISO/IEC 표준 제안 (불법 콘텐츠 자동 탐지 프로토콜)
+- **Data Sharing**: Build an international illegal gambling site database
+- **Technology Transfer**: Transfer system technology to developing countries
+- **Standardization**: Propose ISO/IEC standards (automated illegal content detection protocols)
 
 ---
 
-### 11.4 사업화 방향
+### 11.4 Commercialization Direction
 
 #### 11.4.1 B2G (Business to Government)
 
-**고객**: 방송통신위원회, 경찰청 사이버범죄수사대, 금융감독원
+**Customers**: Korea Communications Commission, National Police Agency Cybercrime Investigation Unit, Financial Supervisory Service
 
-**제공 서비스:**
-- 실시간 불법 사이트 탐지 API
-- 커스터마이징 크롤러 구축
-- 데이터 분석 컨설팅
+**Services Provided:**
+- Real-time illegal site detection API
+- Customized crawler development
+- Data analytics consulting
 
-**수익 모델:**
-- 월 구독료: ₩500만 ~ ₩2,000만
-- 초기 구축비: ₩5,000만 ~ ₩2억
-- 유지보수비: 연 ₩1,000만 ~ ₩5,000만
+**Revenue Model:**
+- Monthly subscription: ₩5M – ₩20M
+- Initial setup fee: ₩50M – ₩200M
+- Maintenance fee: ₩10M – ₩50M per year
 
 #### 11.4.2 B2B (Business to Business)
 
-**고객**: 검색 엔진 (Naver, Google Korea), 광고 플랫폼, 결제 대행사
+**Customers**: Search engines (Naver, Google Korea), advertising platforms, payment service providers
 
-**제공 서비스:**
-- 광고 필터링 API (불법 도박 광고 자동 차단)
-- 결제 사기 탐지 (불법 사이트 거래 패턴 분석)
+**Services Provided:**
+- Ad filtering API (automatically block illegal gambling ads)
+- Payment fraud detection (analysis of transaction patterns on illegal sites)
 
-**수익 모델:**
-- API 호출 기반: ₩10 / 1,000 호출
-- 연간 라이선스: ₩1억 ~ ₩10억
+**Revenue Model:**
+- Per API call: ₩10 / 1,000 calls
+- Annual license: ₩100M – ₩1B
 
-#### 11.4.3 오픈소스 전략
+#### 11.4.3 Open-Source Strategy
 
-**핵심 코드**: MIT 라이선스로 공개 (현재 상태 유지)  
-**프리미엄 기능**: 엔터프라이즈 버전 유료 제공
-- 고급 AI 모델
-- 24/7 기술 지원
-- SLA 보장
+**Core Code**: Released under MIT license (current state maintained)  
+**Premium Features**: Paid enterprise version
+- Advanced AI models
+- 24/7 technical support
+- SLA guarantees
 
-**예상 효과:**
-- 개발자 커뮤니티 형성
-- 버그 리포트 및 기여 유도
-- 브랜드 인지도 향상
-
----
-
-## 결론
-
-### 핵심 요약
-
-본 **불법 도박 사이트 탐지 시스템**은 다음과 같은 특징을 가진 혁신적인 솔루션입니다:
-
-1. **기술적 우수성**
-   - AI 기반 정밀 분석 (Gemini 2.5 Flash)
-   - 이중 폴백 메커니즘 (Selenium + Requests)
-   - 모듈화된 확장 가능 설계
-
-2. **사회적 가치**
-   - 연간 추정 2,900억원 피해 감소
-   - 조기 탐지로 2차 범죄 예방
-   - 데이터 기반 정책 수립 지원
-
-3. **확장 가능성**
-   - 다른 불법 콘텐츠 탐지로 확장 가능
-   - 국제 협력 및 기술 이전 가능
-   - 학술 연구 및 사업화 잠재력
-
-### 사회적 임팩트 선언
-
-불법 도박은 단순한 개인의 문제가 아닌 **사회 전체의 문제**입니다. 본 시스템은 기술의 힘으로 이 문제에 대응하며, 다음과 같은 미래를 지향합니다:
-
-- 🛡️ **안전한 디지털 환경**: 누구나 불법 콘텐츠 걱정 없이 인터넷 사용
-- 👨‍👩‍👧 **보호받는 가정**: 도박 중독으로부터 가족 보호
-- 🏛️ **효과적인 정책**: 데이터 기반 합리적 규제
-- 🌐 **글로벌 협력**: 국경 없는 불법 콘텐츠에 국제 공조로 대응
-
-**"기술로 만드는 더 안전한 사회, 지금 시작합니다."**
+**Expected Effects:**
+- Build a developer community
+- Encourage bug reports and contributions
+- Increase brand awareness
 
 ---
 
-## 부록
+## Conclusion
 
-### A. 참고 문헌
+### Key Summary
+
+This **illegal gambling site detection system** is an innovative solution with the following characteristics:
+
+1. **Technical Excellence**
+   - AI-based precision analysis (Gemini 2.5 Flash)
+   - Dual fallback mechanism (Selenium + Requests)
+   - Modular, extensible design
+
+2. **Social Value**
+   - Estimated annual harm reduction of ₩290 billion
+   - Prevention of secondary crimes through early detection
+   - Support for data-driven policy development
+
+3. **Expandability**
+   - Expandable to detection of other illegal content
+   - International cooperation and technology transfer possible
+   - Academic research and commercialization potential
+
+### Social Impact Statement
+
+Illegal gambling is not merely an individual problem — it is a **problem for society as a whole**. This system uses the power of technology to address this problem, and aims toward the following future:
+
+- 🛡️ **Safe Digital Environment**: Everyone can use the internet without concern about illegal content
+- 👨‍👩‍👧 **Protected Families**: Protecting families from gambling addiction
+- 🏛️ **Effective Policy**: Rational regulation based on data
+- 🌐 **Global Cooperation**: International collaboration to address borderless illegal content
+
+**"Building a safer society through technology — it starts now."**
+
+---
+
+## Appendix
+
+### A. References
 
 1. Google. (2024). Gemini API Documentation. https://ai.google.dev/docs
 2. Selenium Project. (2024). Selenium with Python. https://selenium-python.readthedocs.io/
 3. PostgreSQL. (2024). PostgreSQL Documentation. https://www.postgresql.org/docs/
-4. 방송통신위원회. (2023). 불법 도박 사이트 차단 현황 보고서.
+4. Korea Communications Commission. (2023). Report on the Status of Illegal Gambling Site Blocking.
 5. WHO. (2019). International Classification of Diseases (ICD-11): Gambling Disorder (6C50).
 
-### B. 코드 저장소
+### B. Code Repository
 
 - **GitHub**: https://github.com/yourusername/illicit-gambling-detector
-- **라이선스**: MIT License
-- **기여**: Pull requests welcome!
+- **License**: MIT License
+- **Contributions**: Pull requests welcome!
 
-### C. 연락처
+### C. Contact
 
-프로젝트에 대한 문의, 협업 제안, 기술 지원 요청은 다음으로 연락 주시기 바랍니다:
+For inquiries about the project, collaboration proposals, or technical support requests, please contact:
 
 - **Email**: your.email@example.com
-- **GitHub Issues**: 기술적 문의 및 버그 리포트
-- **LinkedIn**: 비즈니스 협업 제안
+- **GitHub Issues**: Technical inquiries and bug reports
+- **LinkedIn**: Business collaboration proposals
 
 ---
 
-**문서 버전**: 1.0  
-**최종 업데이트**: 2024년 11월 22일  
-**작성자**: [Your Name]  
-**목적**: 소셜임팩트 중심 대회 출품용 기술 문서
+**Document Version**: 1.0  
+**Last Updated**: November 22, 2024  
+**Author**: [Your Name]  
+**Purpose**: Technical document for social impact competition submission
 
 ---
-

@@ -1,202 +1,192 @@
-참고사항
-1. 신고기능구현을 위한 js는 각 페이지별로 각각의 파일로 존재한다.
-2. 보안을 위해 report.html에서 url을 입력하면 supabase에 저장되고 해당 row의 신고 고유 ID (UUID)가 local에 임시저장된다.
-   다른 페이지에서는 UUID를 통해 database에서 현재신행 상황을 가져온다.
-3. local에 저장된 정보는 신고가 완료되거나 취소 등의 상황 종료가 이루어졌을 때 삭제되어야 한다.
-4. 서버 코드는 /report_page에 새로운 폴더를 만들고 그 안에 작성한다.
+Notes
+1. The JS for the reporting feature exists as separate files per page.
+2. For security, when a URL is entered on report.html, it is saved to Supabase, and the report's unique ID (UUID) for that row is temporarily stored locally.
+   Other pages retrieve the current progress from the database using the UUID.
+3. Locally stored information must be deleted when the reporting process ends (completed, cancelled, etc.).
+4. Server code should be written in a new folder created inside /report_page.
 
-신고 시스템 최종 구현 정리본
-1. 시스템 개요
+Reporting System Final Implementation Summary
+1. System Overview
 
-본 시스템은 사용자가 신고 대상 URL을 입력하면
-AI 기반 분석을 통해 불법 여부를 판단하고,
-사용자 확인 이후 증거 수집 및 신고 데이터를 생성하는 웹 기반 신고 보조 시스템이다.
+This system accepts a URL from the user,
+performs AI-based analysis to determine if it is illegal,
+and after user confirmation, generates evidence and report data.
+It is a web-based reporting assistant system.
 
-프론트엔드와 서버는 직접 통신하지 않으며,
-Supabase Realtime Database를 이벤트 기반 통신 수단으로 사용한다.
+The frontend and server do not communicate directly;
+Supabase Realtime Database is used as an event-based communication channel.
 
-2. 사용 기술 및 구조
+2. Technology and Structure
 
 Backend: Python
 
-AI 검증: ../src/gemini_classifier.py
+AI verification: ../src/gemini_classifier.py
 
 Database: Supabase Realtime Database
 
 Storage: Supabase Storage
 
-서버 역할: 상태 기반 작업 처리 워커
+Server role: State-based task processing worker
 
-통신 방식: Database 상태 변경 감지 방식
+Communication method: Database state change detection
 
-3. 데이터 구조
-report_requests 테이블
-컬럼명	설명
-id	신고 고유 ID (UUID)
-url	신고 대상 URL
-status	처리 상태
-is_illegal	AI 불법 판단 여부 (boolean)
-confidence	AI 판단 신뢰도
-reason	불법 판단 사유 (text)
-detected_keywords	탐지된 핵심 키워드
-screenshot_url	스크린샷 이미지 URL
-created_at	생성 시각
-status 값 목록
+3. Data Structure
+report_requests table
+Column          Description
+id              Unique report ID (UUID)
+url             URL to be reported
+status          Processing status
+is_illegal      AI determination of illegality (boolean)
+confidence      AI confidence score
+reason          Reason for illegal determination (text)
+detected_keywords  Detected key keywords
+screenshot_url  Screenshot image URL
+created_at      Creation timestamp
 
+status values:
 submitted
-
 analyzed
-
 confirmed
-
 reported
-
 cancel
 
-4. 전체 처리 흐름
+4. Overall Processing Flow
 
-프론트엔드는 URL을 입력받아 reports_requests 테이블에 새 row를 생성한다.
-이때 status는 submitted로 설정한다.
+The frontend receives a URL and creates a new row in the report_requests table.
+The status is set to 'submitted'.
 
-서버는 status가 submitted인 row를 감지하면 AI 분석을 수행한다.
+The server detects rows with status 'submitted' and performs AI analysis.
 
-AI 분석 결과를 reports_requests 테이블에 업데이트하고 status를 analyzed로 변경한다.
+AI analysis results are written back to report_requests and status is changed to 'analyzed'.
 
-프론트엔드는 analyzed 상태의 데이터를 사용자에게 표시한다.
+The frontend displays the 'analyzed' data to the user.
 
-사용자는 분석 결과를 확인하고, 필요 시 사유(reason)를 수정한 후 신고를 진행한다.
+The user reviews the analysis result, optionally edits the reason, then proceeds to report.
 
-프론트엔드는 status를 confirmed로 변경하여 신고 요청을 전달한다.
+The frontend changes status to 'confirmed' to signal the report request.
 
-서버는 confirmed 상태를 감지하면 스크린샷 캡처를 수행한다.
+The server detects 'confirmed' status and performs a screenshot capture.
 
-스크린샷을 Supabase Storage에 업로드하고, 해당 URL을 reports_requests 테이블에 저장한다.
+The screenshot is uploaded to Supabase Storage and the URL is saved in the report_requests table.
 
-서버는 status를 reported로 변경하여 모든 처리를 완료한다.
+The server changes status to 'reported' to mark all processing as complete.
 
-5. 취소 처리
+5. Cancellation
 
-사용자는 analyzed 또는 confirmed 단계에서 취소할 수 있다.
+The user can cancel at the 'analyzed' or 'confirmed' stage.
 
-취소 시 status는 cancel로 변경된다.
+On cancellation, status is changed to 'cancel'.
 
-서버는 cancel 상태의 row에 대해 어떠한 작업도 수행하지 않는다.
+The server performs no action on rows with 'cancel' status.
 
-cancel은 최종 상태이며 이후 상태 변경은 허용되지 않는다.
+'cancel' is a terminal state; no further state changes are allowed.
 
-6. 서버 역할 상세
-서버는 다음 작업만 수행한다.
+6. Server Responsibilities
+The server only performs the following:
 
-submitted 상태 감지 → AI 분석 실행
+Detect 'submitted' status → run AI analysis
 
-confirmed 상태 감지 → 스크린샷 캡처 및 저장
+Detect 'confirmed' status → capture and store screenshot
 
-각 단계에서 결과를 database에 기록
+Record results to the database at each stage
 
-서버는 다음 작업을 수행하지 않는다.
+The server does NOT:
 
-프론트엔드 직접 통신
+Communicate directly with the frontend
 
-UI 렌더링
+Render UI
 
-사용자 입력 검증
+Validate user input
 
-7. 서버 내부 구조 (권장)
+7. Recommended Server Structure
 
 worker.py
-
-Supabase realtime 구독
-
-상태에 따라 작업 분기
+  Supabase realtime subscription
+  Branch logic based on status
 
 handlers/analyze.py
-
-gemini_classifier 호출
-
-분석 결과 database 반영
+  Call gemini_classifier
+  Write analysis results to database
 
 handlers/screenshot.py
+  Capture webpage
+  Upload to Storage
 
-웹페이지 캡처
+8. Frontend Responsibilities
 
-Storage 업로드
+Accept URL input and create report_requests row
 
-8. 프론트엔드 역할
+Subscribe to database realtime events
 
-URL 입력 및 reports_requests row 생성
+Switch screens based on status changes
 
-database realtime 구독
+Display 'analyzed' results
 
-status 변화에 따른 화면 전환
+Handle report confirmation and cancellation
 
-analyzed 결과 표시
+9. State Transition Rules
 
-신고 승인 및 취소 처리
+submitted → analyzed or cancel
 
-9. 상태 전이 규칙
+analyzed → confirmed or cancel
 
-submitted → analyzed 또는 cancel
+confirmed → reported or cancel
 
-analyzed → confirmed 또는 cancel
+reported → terminal state
 
-confirmed → reported 또는 cancel
+cancel → terminal state
 
-reported → 종료 상태
+10. Implementation Notes
 
-cancel → 종료 상태
+Strictly maintain status-based logic.
 
-10. 구현 시 유의사항
+The server always checks the current status before performing any action.
 
-status 기반 로직을 엄격히 유지한다.
+Ensure only one task is performed per row at a time.
 
-서버는 항상 현재 status를 확인한 후 작업을 수행한다.
+On failure, explicitly terminate by setting status to 'cancel'.
 
-하나의 row는 한 번에 하나의 작업만 수행되도록 한다.
+This document precisely defines "what needs to be built" and serves as a reference
+document for code generation using the Gemini CLI.
 
-실패 상황에서는 cancel 상태로 명확히 종료한다.
+======= Page-by-page content below =======
 
-이 문서는
-“무엇을 만들어야 하는지”를 정확히 정의하는 구현 기준 문서이며,
-Gemini CLI를 사용한 코드 생성 시 참조 문서로 사용한다.
+Page 1
+Main page. Clicking "Report Online Gambling" navigates to page 2.
+Other buttons are non-functional.
 
-======= 아래는 페이지별 내용 =======
+Page 2
+A URL can be entered in the input field. Clicking "Request Site Verification" shows a loading overlay (Page 3).
 
-1페이지
-메인 페이지로 "온라인 도박 신고하기"를 누르면 2로 넘어감.
-다른 버튼은 작동 안함
+Page 3
+The loading spinner (/img/loading.png) keeps spinning; the AI icon (/img/ai icon.svg) inside does not spin.
 
-2페이지
-"입력공간"에 URL을 입력할 수 있음. 사이트 검증 요청을 누르면, 로딩 오버레이가 뜸.(3페이지)
+Page 4.1
+If AI verification determines the site is illegal, the overlay on page 3 changes to 4.1 (overlay appears on top of page 2).
+After a few seconds, navigates to page 5.1.1.
 
-3페이지
-로딩 스피너(/img/loading.png)가 계속 돌고, 내부의 AI 아이콘(/img/ai icon.svg)은 돌지 않음.
+Page 4.2
+If AI verification determines the site is not illegal, the overlay on page 3 changes to 4.2 (overlay appears on top of page 2).
+After a few seconds, navigates to page 5.2.
 
-4.1페이지
-AI 검증 결과 불법 사이트가 맞다면 3페이지의 오버레이가 4.1로 바뀜.(2페이지 위에 4.1의 오버레이가 뜸)
-몇 초 후 5.1.1로 넘어감
+Page 5.1.1
+All information is read-only (non-editable).
+Clicking "Report" shows a loading overlay (Page 5.1.3).
+Clicking "Edit" navigates to page 5.1.2.
+Clicking "Cancel" returns to page 1.
+Clicking the back button at the top returns to page 2.
 
-4.2페이지
-AI 검증 결과 불법 사이트가 아니라면 3페이지의 오버레이가 4.2로 바뀜.(2페이지 위에 4.2의 오버레이가 뜸)
-몇 초 후 5.2로 넘어감
+Page 5.1.2
+All information (including keywords) is editable.
+Clicking "Confirm" returns to page 5.1.1 (edited content must be applied).
 
-5.1.1페이지
-모든 정보는 수정할 수 없는 상태(보기 전용)
-신고하기를 누르면 로딩 오버레이가 뜸.(5.1.3페이지)
-수정하기를 누르면 5.1.2페이지로 넘어감
-취소하기를 누르면 1로 돌아감
-멘 위의 뒤로가기를 누르면 2로 돌아감
+Page 5.1.3
+After the report is completed, navigates to page 6.
 
-5.1.2페이지
-모든 정보(키워드 포함)를 수정 가능
-확인을 누르면 5.1.1로 넘어감(수정한 내용이 적용되야함)
+Page 5.2
+All information is read-only (non-editable).
+Clicking "Exit" returns to page 1.
+Clicking the back button at the top returns to page 2.
 
-5.1.3페이지
-신고가 완료되면 6으로 넘어감.
-
-5.2페이지
-모든 정보는 수정할 수 없는 상태(보기 전용)
-종료하기를 누르면 1로 돌아감.
-멘 위의 뒤로가기를 누르면 2로 돌아감.
-
-6페이지
-잠시 후 1로 돌아감.
+Page 6
+Returns to page 1 after a short delay.
