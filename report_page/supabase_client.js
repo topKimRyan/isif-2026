@@ -1,8 +1,8 @@
 // supabase_client.js
 
 // IMPORTANT: Replace the values below with your actual Supabase project URL and anon key.
-const SUPABASE_URL = 'https://ezpnbmglzbxujveexmvm.supabase.co'; // e.g. https://your-project-id.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6cG5ibWdsemJ4dWp2ZWV4bXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0Nzg5MjcsImV4cCI6MjA4MDA1NDkyN30.ngUP3-o0a3M2wG_8IfDZVLpQEbTCjh5P2HO2ncnymhY'; // e.g. eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+const SUPABASE_URL = 'https://pimnyvbggbobuvnyezga.supabase.co'; // e.g. https://your-project-id.supabase.co
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpbW55dmJnZ2JvYnV2bnllemdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMjc4MzMsImV4cCI6MjA5NTgwMzgzM30.UTTzmrEH6k_FVNgnbElR8ubQCJbbke2FrRIvc3a1mCw'; // e.g. eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 let supabaseClient;
 
