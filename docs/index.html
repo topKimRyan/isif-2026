@@ -3,77 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Illegal Gambling Site Reporting Dashboard</title>
+    <title>Illegal Gambling Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🚨 Illegal Gambling Site Reporting Dashboard</h1>
-            <p>List of illegal gambling sites detected by AI</p>
-        </header>
 
-        <!-- Statistics section -->
+<!-- ── Sidebar ──────────────────────────────────────────── -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">🛡️</div>
+        <div class="logo-text">
+            GambleGuard
+            <span>Admin Dashboard</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <span class="nav-label">Monitor</span>
+        <a class="nav-link active" href="#">
+            <span class="icon">📋</span> Detected Sites
+        </a>
+        <a class="nav-link" href="#">
+            <span class="icon">📊</span> Analytics
+        </a>
+        <span class="nav-label">System</span>
+        <a class="nav-link" href="#">
+            <span class="icon">⚙️</span> Settings
+        </a>
+        <a class="nav-link" href="#">
+            <span class="icon">📄</span> Logs
+        </a>
+    </nav>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────── -->
+<div class="main-wrapper">
+    <!-- Top bar -->
+    <header class="topbar">
+        <span class="topbar-title">Detected Sites</span>
+        <div class="topbar-right">
+            <button class="btn btn-primary">＋ Add Report</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header">
+            <h1>Illegal Gambling Sites</h1>
+            <p>AI-detected sites flagged as illegal online gambling</p>
+        </div>
+
+        <!-- Stats -->
         <div class="stats-section">
             <div class="stat-card">
+                <div class="stat-card-top">
+                    <div class="stat-icon danger">🚨</div>
+                    <span class="stat-trend up" id="trend-total">↑</span>
+                </div>
                 <div class="stat-label">Total Illegal Sites</div>
-                <div class="stat-value" id="total-count">-</div>
+                <div class="stat-value" id="total-count">—</div>
             </div>
             <div class="stat-card">
+                <div class="stat-card-top">
+                    <div class="stat-icon primary">🎯</div>
+                    <span class="stat-trend flat" id="trend-confidence">~</span>
+                </div>
                 <div class="stat-label">Avg. Confidence</div>
-                <div class="stat-value" id="avg-confidence">-</div>
+                <div class="stat-value" id="avg-confidence">—</div>
             </div>
             <div class="stat-card">
+                <div class="stat-card-top">
+                    <div class="stat-icon success">📅</div>
+                </div>
                 <div class="stat-label">Last Updated</div>
-                <div class="stat-value" id="last-update">-</div>
+                <div class="stat-value" id="last-update" style="font-size:16px;margin-top:4px">—</div>
             </div>
         </div>
 
-        <!-- Search & filter section -->
-        <div class="search-section">
-            <input type="text" id="search-input" placeholder="Search by URL or keyword...">
-            <button id="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+        <!-- Error banner -->
+        <div id="error" class="error-banner" style="display:none;">
+            <span>⚠️</span>
+            <span id="error-msg">Failed to load data.</span>
         </div>
 
-        <!-- Loading indicator -->
-        <div id="loading" class="loading">Loading data...</div>
-
-        <!-- Error message -->
-        <div id="error" class="error" style="display: none;"></div>
-
-        <!-- Table section -->
-        <div class="table-container">
-            <table id="sites-table">
-                <thead>
-                    <tr>
-                        <th>Icon</th>
-                        <th>URL</th>
-                        <th>Search Keyword</th>
-                        <th>Confidence</th>
-                        <th>Collected At</th>
-                        <th>Details</th>
-                    </tr>
-                </thead>
-                <tbody id="sites-tbody">
-                    <!-- Data inserted by JavaScript -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Detail modal -->
-    <div id="detail-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2>Details</h2>
-            <div id="modal-body">
-                <!-- Detail content inserted by JavaScript -->
+        <!-- Table card -->
+        <div class="table-card">
+            <div class="toolbar" style="padding: 14px 16px 0;">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Search by URL or keyword...">
+                </div>
+                <button class="btn btn-outline" onclick="loadData()">↺ Refresh</button>
             </div>
-        </div>
-    </div>
 
-    <!-- Supabase JavaScript client CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+            <div class="table-container">
+                <!-- Loading state -->
+                <div id="loading" class="state-box">
+                    <div class="spinner"></div>
+                    <span class="state-title">Loading data...</span>
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="state-box" style="display:none;">
+                    <span class="state-icon">🔎</span>
+                    <span class="state-title">No results found</span>
+                    <span class="state-desc">Try a different search term or refresh the data.</span>
+                </div>
+
+                <table id="sites-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;"></th>
+                            <th>URL</th>
+                            <th>Keyword</th>
+                            <th>Confidence</th>
+                            <th>Detected At</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sites-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="table-footer" id="table-footer"></div>
+        </div>
+    </main>
+</div>
+
+<!-- ── Detail Modal ──────────────────────────────────────── -->
+<div id="detail-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Site Details</h2>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
 </body>
 </html>
