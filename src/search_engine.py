@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoAlertPresentException, TimeoutException, WebDriverException
 
 try:
     from .url_safety import is_public_http_url
@@ -18,10 +18,12 @@ except ImportError:  # Imported as a top-level module by report_page/server hand
 
 
 class SearchEngine:
-    def __init__(self, headless: bool = True, captcha_wait_seconds: int = 300):
+    def __init__(self, headless: bool = True, captcha_wait_seconds: int = 300, page_load_timeout: int = 20):
         self.headless = headless
         self.captcha_wait_seconds = captcha_wait_seconds
+        self.page_load_timeout = page_load_timeout
         self.driver = None
+        self.main_window = None
 
         # News/reference site domains to exclude from results (matched against the hostname,
         # including subdomains). Hosts starting with "news." are excluded as well.
@@ -64,6 +66,11 @@ class SearchEngine:
         ]
         chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
 
+        # Return once the HTML is parsed instead of waiting for every image, ad, and tracker
+        chrome_options.page_load_strategy = "eager"
+        # Silently dismiss alert()/confirm() popups whenever they appear instead of failing the next command
+        chrome_options.set_capability("unhandledPromptBehavior", "dismiss")
+
         # Install and initialize ChromeDriver (with webdriver-manager bug workaround)
         try:
             installed_path = ChromeDriverManager().install()
@@ -86,8 +93,60 @@ class SearchEngine:
             print(f"FATAL: Failed to initialize ChromeDriver: {e}")
             raise
 
+        # Don't let a site that never finishes loading block the crawler (Selenium's default is 300s)
+        self.driver.set_page_load_timeout(self.page_load_timeout)
+        self.main_window = self.driver.current_window_handle
+
         # Bypass automation detection
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    def _load_page(self, url: str):
+        """
+        Opens a URL without getting stuck: stops loading after page_load_timeout and keeps
+        whatever has loaded, then dismisses alerts and closes tabs/popups the site opened.
+        """
+        try:
+            self.driver.get(url)
+        except TimeoutException:
+            print(f"    ⏱️ Page still loading after {self.page_load_timeout}s; using what has loaded")
+            try:
+                self.driver.execute_script("window.stop();")
+            except WebDriverException:
+                pass
+        self._clean_up_browser_state()
+
+    def _clean_up_browser_state(self):
+        """Dismisses JavaScript alerts and closes extra tabs so the next page starts cleanly."""
+        try:
+            self.driver.switch_to.alert.dismiss()
+            print("    ⚠️ Dismissed a JavaScript alert")
+        except (NoAlertPresentException, WebDriverException):
+            pass
+
+        try:
+            handles = self.driver.window_handles
+            if self.main_window not in handles:
+                self.main_window = handles[0]
+            for handle in handles:
+                if handle != self.main_window:
+                    self.driver.switch_to.window(handle)
+                    self.driver.close()
+            self.driver.switch_to.window(self.main_window)
+        except WebDriverException:
+            pass
+
+    def _ensure_browser_alive(self):
+        """Restarts Chrome if it stopped responding (e.g. a page froze the renderer)."""
+        try:
+            _ = self.driver.current_url
+        except Exception as e:
+            print(f"    ⚠️ Browser stopped responding, restarting Chrome... ({type(e).__name__})")
+            try:
+                self.driver.quit()
+            except Exception:
+                pass
+            self.driver = None
+            self.setup_driver()
 
     def take_screenshot_from_url(self, url: str, path: str):
         """
@@ -101,7 +160,7 @@ class SearchEngine:
         try:
             if not is_public_http_url(url):
                 raise ValueError(f"Blocked non-public URL: {url}")
-            self.driver.get(url)
+            self._load_page(url)
             time.sleep(5)  # Allow time for the page to load fully
             # Re-check after redirects so a public URL can't bounce to an internal address
             if not is_public_http_url(self.driver.current_url):
@@ -128,7 +187,7 @@ class SearchEngine:
             if not is_public_http_url(url):
                 print(f"  ❌ Blocked non-public URL: {url}")
                 return ""
-            self.driver.get(url)
+            self._load_page(url)
             time.sleep(5) # Give page time to load and execute JS
             # Re-check after redirects so a public URL can't bounce to an internal address
             if not is_public_http_url(self.driver.current_url):
@@ -249,7 +308,7 @@ class SearchEngine:
                 break
             try:
                 print(f"    [{i}/{len(links_to_visit)}] 🔗 Visiting: {target_url[:120]}")
-                self.driver.get(target_url)
+                self._load_page(target_url)
                 time.sleep(random.uniform(2, 3))
 
                 current_url = self.driver.current_url
@@ -268,6 +327,7 @@ class SearchEngine:
                 print(f"    ✅ HTML collected: {current_url}")
             except Exception as e:
                 print(f"    ❌ Error visiting link {target_url[:120]}: {e}")
+                self._ensure_browser_alive()
 
         return results
 

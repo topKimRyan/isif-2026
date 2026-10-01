@@ -20,6 +20,7 @@ class GamblingDomainCrawler:
         self.search_engine = SearchEngine(
             headless=self.settings.get("headless_mode", True),
             captcha_wait_seconds=self.settings.get("captcha_wait_seconds", 300),
+            page_load_timeout=self.settings.get("page_load_timeout", 20),
         )
         self.url_extractor = URLExtractor(
             remove_tracking_params=self.settings.get("remove_tracking_params", True)

@@ -7,5 +7,6 @@
   "remove_tracking_params": true,
   "use_gemini_classifier": true,
   "combine_keywords": false,
-  "captcha_wait_seconds": 300
+  "captcha_wait_seconds": 300,
+  "page_load_timeout": 20
 }

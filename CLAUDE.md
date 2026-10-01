@@ -111,6 +111,7 @@ The crawler is controlled via `settings.json`:
 - `use_gemini_classifier`: Enable Gemini-based URL classification (true/false)
 - `combine_keywords`: Also search every 2-keyword pair (true/false). With N keywords this adds N·(N−1)/2 searches, so keep it off for long keyword lists
 - `captcha_wait_seconds`: When Google shows a CAPTCHA, how long to wait for you to solve it by hand in the visible Chrome window (requires `headless_mode: false`); the keyword is skipped if it isn't solved in time
+- `page_load_timeout`: Seconds to wait for a site to load before stopping it and using what has loaded (sites that never finish loading would otherwise block the crawler)
 
 **Note:** API keys and database credentials are managed via the `.env` file (not `settings.json`).
 
