@@ -60,7 +60,8 @@ class GamblingDomainCrawler:
             visited_results: list of (url, html_content) tuples
 
         Returns:
-            (filtered_urls, classification_results) tuple
+            (filtered_urls, classification_results) tuple, where
+            classification_results[i] is the result for filtered_urls[i]
         """
         if not self.use_classifier or not self.classifier:
             # Return all URLs if classifier is unavailable
@@ -76,11 +77,11 @@ class GamblingDomainCrawler:
 
             print(f"  🔍 Classifying: {url}")
             result = self.classifier.classify_url(url, html_content)
-            classification_results.append(result)
 
             if result.get("error") is None and result.get("is_illegal"):
                 print(f"  ✅ Illegal site detected: {url} (confidence: {result.get('confidence', 0):.2f})")
                 filtered_urls.append(url)
+                classification_results.append(result)
             elif result.get("error"):
                 print(f"  ⚠️ Classification error {url}: {result.get('error')}")
             else:
