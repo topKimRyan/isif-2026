@@ -180,19 +180,19 @@ class DatabaseManager:
         self.connection.commit()
         return True
 
-    def insert_bulk_url_data(self, url_data_list: List[Dict[str, Any]]) -> int:
-        """Bulk-inserts multiple URL records."""
-        inserted_count = 0
+    def insert_bulk_url_data(self, url_data_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Bulk-inserts multiple URL records. Returns the records that failed to insert."""
+        failed = []
 
         for url_data in url_data_list:
             try:
                 self.insert_url_data(url_data)
-                inserted_count += 1
             except Exception as e:
                 print(f"❌ Failed to insert URL ({url_data.get('url')}): {e}")
                 self.connection.rollback()
+                failed.append(url_data)
 
-        return inserted_count
+        return failed
 
     def get_illegal_urls(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Retrieves illegal gambling site URLs from the database."""
@@ -272,12 +272,19 @@ def import_from_json(json_file_path: str, delete_after_import: bool = True):
 
     print(f"📄 Read {len(url_data_list)} URL records.")
 
+    # Records crawled without Gemini have no verdict and can't satisfy is_illegal NOT NULL
+    unclassified = [d for d in url_data_list if d.get("is_illegal") is None]
+    classified = [d for d in url_data_list if d.get("is_illegal") is not None]
+    if unclassified:
+        print(f"⚠️ Skipping {len(unclassified)} unclassified records (no Gemini verdict); they stay in the JSON file.")
+
     db = DatabaseManager()
     db.connect()
 
     db.create_tables()
 
-    inserted_count = db.insert_bulk_url_data(url_data_list)
+    failed = db.insert_bulk_url_data(classified)
+    inserted_count = len(classified) - len(failed)
     print(f"✅ Saved {inserted_count} URL records to the database.")
 
     stats = db.get_statistics()
@@ -289,7 +296,16 @@ def import_from_json(json_file_path: str, delete_after_import: bool = True):
 
     db.disconnect()
 
-    if delete_after_import and inserted_count > 0:
+    if not delete_after_import:
+        return
+
+    remaining = unclassified + failed
+    if remaining:
+        # Keep only the records that were not imported so nothing is lost
+        with open(json_file_path, 'w', encoding='utf-8') as f:
+            json.dump(remaining, f, indent=2, ensure_ascii=False)
+        print(f"\n📝 Kept {len(remaining)} records that were not imported in {json_file_path}")
+    else:
         os.remove(json_file_path)
         print(f"\n🗑️ Deleted JSON file: {json_file_path}")
         print("   (A new results.json will be created on the next crawl)")
