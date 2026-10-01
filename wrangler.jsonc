@@ -1,0 +1,12 @@
+// Cloudflare Workers static-site config (deployed at https://isif-2026.2369-ryan.workers.dev).
+// Cloudflare runs `bash scripts/build_site.sh` (build) and then `npx wrangler deploy` (deploy),
+// which uploads the dist/ folder: / = report service, /dashboard/ = dashboard.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker name in the Cloudflare dashboard
+  "name": "isif-2026",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
