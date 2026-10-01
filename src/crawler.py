@@ -1,9 +1,6 @@
 import time
 import json
-import requests
-import os
 from typing import Dict, Any
-from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 from .keyword_manager import KeywordManager
@@ -39,19 +36,6 @@ class GamblingDomainCrawler:
         with open(settings_file, 'r', encoding='utf-8') as f:
             return json.load(f)
 
-    def _fetch_html_from_url(self, url: str, timeout: int = 10) -> str:
-        """Fetches HTML content from the given URL."""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            response = requests.get(url, headers=headers, timeout=timeout)
-            response.encoding = response.apparent_encoding or 'utf-8'
-            return response.text
-        except Exception as e:
-            print(f"  ❌ Failed to fetch URL {url}: {e}")
-            return ""
-
     def _classify_visited_results(self, visited_results: list) -> tuple:
         """
         Classifies visited results (URL + HTML pairs) and filters for illegal gambling sites.
@@ -82,41 +66,6 @@ class GamblingDomainCrawler:
                 print(f"  ✅ Illegal site detected: {url} (confidence: {result.get('confidence', 0):.2f})")
                 filtered_urls.append(url)
                 classification_results.append(result)
-            elif result.get("error"):
-                print(f"  ⚠️ Classification error {url}: {result.get('error')}")
-            else:
-                print(f"  ❌ Not an illegal gambling site: {url}")
-
-        return filtered_urls, classification_results
-
-    def _classify_and_filter_urls(self, urls: list) -> tuple:
-        """
-        Classifies a list of URLs and filters for illegal gambling sites.
-
-        Returns:
-            (filtered_urls, classification_results) tuple
-        """
-        if not self.use_classifier or not self.classifier:
-            return urls, None
-
-        filtered_urls = []
-        classification_results = []
-
-        for url in urls:
-            print(f"  📥 Fetching content: {url}")
-            html_content = self._fetch_html_from_url(url)
-
-            if not html_content:
-                print(f"  ⏭️ Skipping {url} - failed to fetch content")
-                continue
-
-            print(f"  🔍 Classifying: {url}")
-            result = self.classifier.classify_url(url, html_content)
-            classification_results.append(result)
-
-            if result.get("error") is None and result.get("is_illegal"):
-                print(f"  ✅ Illegal site detected: {url} (confidence: {result.get('confidence', 0):.2f})")
-                filtered_urls.append(url)
             elif result.get("error"):
                 print(f"  ⚠️ Classification error {url}: {result.get('error')}")
             else:
@@ -167,6 +116,7 @@ class GamblingDomainCrawler:
         new_visited_results = []
         batch_urls = set()
         for url, html in visited_results:
+            url = self.url_extractor.clean_url(url)
             if url not in existing_urls and url not in batch_urls:
                 batch_urls.add(url)
                 new_visited_results.append((url, html))

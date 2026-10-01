@@ -65,31 +65,17 @@ class SearchEngine:
 
         # Install and initialize ChromeDriver (with webdriver-manager bug workaround)
         try:
-            buggy_path = ChromeDriverManager().install()
-            print(f"DEBUG: Path from webdriver-manager: {buggy_path}")
+            installed_path = ChromeDriverManager().install()
 
-            # BUG WORKAROUND: webdriver-manager might return a path to a notice file.
-            # We construct the correct path to 'chromedriver.exe'.
-            driver_dir = os.path.dirname(buggy_path)
-            driver_path = os.path.join(driver_dir, "chromedriver.exe")
-
-            print(f"DEBUG: Constructed driver path: {driver_path}")
-            print(f"DEBUG: Constructed path exists: {os.path.exists(driver_path)}")
-
-            if not os.path.exists(driver_path):
-                 # If the path is still wrong, try one directory up, as the folder structure might be nested.
-                 # e.g., .../chromedriver-win32/chromedriver.exe
-                 # The buggy path might be .../chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver
-                 # so dirname is correct. Let's check parent dir just in case.
-                 driver_dir = os.path.dirname(os.path.dirname(buggy_path))
-                 driver_path = os.path.join(driver_dir, "chromedriver.exe")
-                 print(f"DEBUG: Trying parent directory. New path: {driver_path}")
-                 print(f"DEBUG: Parent directory path exists: {os.path.exists(driver_path)}")
-
-
-            if not os.path.exists(driver_path):
-                print("ERROR: Could not find chromedriver.exe even with workarounds. Using original path.")
-                driver_path = buggy_path # Fallback to the original path
+            # BUG WORKAROUND: webdriver-manager may return a path to a notice file
+            # (e.g. .../chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver) instead of the binary,
+            # so look for the driver binary next to it, then one directory up.
+            driver_name = "chromedriver.exe" if os.name == "nt" else "chromedriver"
+            candidates = [
+                os.path.join(os.path.dirname(installed_path), driver_name),
+                os.path.join(os.path.dirname(os.path.dirname(installed_path)), driver_name),
+            ]
+            driver_path = next((path for path in candidates if os.path.exists(path)), installed_path)
 
             service = Service(driver_path)
             print("ChromeDriver is set up automatically via webdriver-manager.")

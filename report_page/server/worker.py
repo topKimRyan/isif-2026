@@ -8,7 +8,7 @@ from realtime import AsyncRealtimeClient, RealtimeSubscribeStates
 from typing import Optional
 from handlers.analyze import handle_analysis
 from handlers.screenshot import handle_screenshot
-from handlers.database_logger import upsert_illegal_site, log_final_report
+from handlers.database_logger import log_final_report
 
 async def main():
     # Load environment variables from .env file
@@ -21,24 +21,19 @@ async def main():
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise ValueError("Supabase URL and service key must be set in .env file")
 
-    print(f"DEBUG: SUPABASE_URL from .env: {SUPABASE_URL}")
     # Initialize the standard Supabase client for other operations (e.g., database inserts/updates)
     supabase: Client = await create_async_client(SUPABASE_URL, SUPABASE_KEY)
 
     # Format the Supabase URL for the Realtime client
     # Assumes SUPABASE_URL is like "https://<project_ref>.supabase.co"
     REALTIME_URL = SUPABASE_URL.replace("https://", "wss://") + "/realtime/v1"
-    print(f"DEBUG: REALTIME_URL for Realtime client: {REALTIME_URL}")
 
     # Initialize the AsyncRealtimeClient directly
     socket = AsyncRealtimeClient(REALTIME_URL, SUPABASE_KEY)
 
     # Callback for new 'submitted' reports
     async def handle_submitted_report_callback(payload):
-        print("submitted")
-        print(f"DEBUG: Realtime Payload received: {payload}") # DEBUG
         report = payload.get('data', {}).get('record', {})
-        print(report)
         if report:
             print(f"SUBMITTED event received: {report['id']}.")
             # Schedule the handler to run as a background task
