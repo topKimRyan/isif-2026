@@ -1,7 +1,7 @@
 import time
 import random
 import os
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import parse_qs, quote_plus, urlparse
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -207,7 +207,7 @@ class SearchEngine:
         Collects links from the search results page, then visits each one and collects HTML.
 
         Args:
-            max_links: maximum number of links to visit
+            max_links: maximum number of pages to collect (excluded sites don't count)
 
         Returns:
             list of (url, html_content) tuples
@@ -227,34 +227,77 @@ class SearchEngine:
         for href in hrefs:
             if not href or not href.startswith(("http://", "https://")):
                 continue
+            target, is_redirect = self._resolve_google_link(href)
+            if not target:
+                continue
             # Skip repeated links to the same page (e.g. title link + sitelinks)
-            key = href.split("#")[0].rstrip("/")
+            key = target.split("#")[0].rstrip("/")
             if key in seen:
                 continue
             seen.add(key)
-            if self._is_excluded_host(urlparse(href).hostname):
-                print(f"    ⏭️ Skipping excluded site: {href}")
+            # Opaque Google redirects (/goto) can only be checked after the browser follows them
+            if not is_redirect and self._is_excluded_host(urlparse(target).hostname):
+                print(f"    ⏭️ Skipping excluded site: {target}")
                 continue
-            links_to_visit.append(href)
+            links_to_visit.append(target)
 
-        print(f"  📋 Found {len(links_to_visit)} valid links, visiting {min(len(links_to_visit), max_links)}")
-        links_to_visit = links_to_visit[:max_links]
+        print(f"  📋 Found {len(links_to_visit)} candidate links, collecting up to {max_links}")
 
+        collected_urls = set()
         for i, target_url in enumerate(links_to_visit, 1):
+            if len(results) >= max_links:
+                break
             try:
-                print(f"    [{i}/{len(links_to_visit)}] 🔗 Visiting: {target_url}")
+                print(f"    [{i}/{len(links_to_visit)}] 🔗 Visiting: {target_url[:120]}")
                 self.driver.get(target_url)
                 time.sleep(random.uniform(2, 3))
 
                 current_url = self.driver.current_url
+                # Check the final address: redirects reveal the real site only after loading
+                if self._is_excluded_host(urlparse(current_url).hostname):
+                    print(f"    ⏭️ Skipping excluded site: {current_url}")
+                    continue
+                if current_url in collected_urls:
+                    print(f"    ⏭️ Already collected: {current_url}")
+                    continue
+                collected_urls.add(current_url)
+
                 html_content = self.driver.page_source
 
                 results.append((current_url, html_content))
                 print(f"    ✅ HTML collected: {current_url}")
             except Exception as e:
-                print(f"    ❌ Error visiting link {target_url}: {e}")
+                print(f"    ❌ Error visiting link {target_url[:120]}: {e}")
 
         return results
+
+    def _resolve_google_link(self, href: str) -> tuple:
+        """
+        Unwraps Google redirect links in search results.
+
+        Returns (url, is_redirect):
+        - /url?q=<real url>  -> (real url, False)
+        - /goto?url=<token>  -> (href, True): the token is opaque, so the browser must follow it
+        - other Google pages -> (None, False)
+        - anything else      -> (href, False)
+        """
+        parsed = urlparse(href)
+        hostname = (parsed.hostname or "").lower()
+        if not any(part == "google" for part in hostname.split(".")):
+            return href, False
+
+        if parsed.path == "/url":
+            params = parse_qs(parsed.query)
+            for name in ("q", "url"):
+                value = params.get(name, [""])[0]
+                if value.startswith(("http://", "https://")):
+                    return value, False
+            return None, False
+
+        if parsed.path == "/goto":
+            return href, True
+
+        return None, False
 
     def _is_excluded_host(self, hostname: str) -> bool:
         """Returns True for search engine, news, and reference hosts that should not be crawled."""
