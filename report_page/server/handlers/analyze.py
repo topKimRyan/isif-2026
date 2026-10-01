@@ -13,6 +13,7 @@ if src_path not in sys.path:
 
 from gemini_classifier import GeminiClassifier
 from search_engine import SearchEngine
+from url_safety import is_public_http_url
 
 
 def _get_html_sync(url: str) -> str:
@@ -42,6 +43,14 @@ async def handle_analysis(supabase: Client, report: dict):
     print(f"[{report_id}] Starting analysis for URL: {url}")
 
     try:
+        if not await asyncio.to_thread(is_public_http_url, url):
+            print(f"[{report_id}] Rejected non-public URL: {url}")
+            await supabase.table('report_requests').update({
+                'status': 'error',
+                'reason': "Only public http(s) URLs can be analyzed."
+            }).eq('id', report_id).execute()
+            return
+
         # 1. Fetch HTML content from the URL in a separate thread
         print(f"[{report_id}] Scheduling HTML fetch task in a separate thread...")
         html_content = await asyncio.to_thread(_get_html_sync, url)

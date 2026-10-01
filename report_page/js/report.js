@@ -10,9 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (analysisButton) {
         analysisButton.addEventListener('click', async () => {
-            const url = urlInput.value.trim();
+            let url = urlInput.value.trim();
             if (!url) {
                 alert('Please enter a site URL.');
+                return;
+            }
+
+            // Accept bare domains like "example.com" by assuming https
+            if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+                url = `https://${url}`;
+            }
+
+            // Only http(s) URLs can be analyzed (the server enforces this too)
+            try {
+                const parsed = new URL(url);
+                if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+                url = parsed.href;
+            } catch {
+                alert('Please enter a valid http(s) site URL.');
                 return;
             }
 

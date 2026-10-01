@@ -9,6 +9,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+try:
+    from .url_safety import is_public_http_url
+except ImportError:  # Imported as a top-level module by report_page/server handlers
+    from url_safety import is_public_http_url
 
 
 class SearchEngine:
@@ -35,7 +39,6 @@ class SearchEngine:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        chrome_options.add_argument("--disable-web-security")
         chrome_options.add_argument("--disable-features=VizDisplayCompositor")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -98,8 +101,13 @@ class SearchEngine:
             self.setup_driver()
 
         try:
+            if not is_public_http_url(url):
+                raise ValueError(f"Blocked non-public URL: {url}")
             self.driver.get(url)
             time.sleep(5)  # Allow time for the page to load fully
+            # Re-check after redirects so a public URL can't bounce to an internal address
+            if not is_public_http_url(self.driver.current_url):
+                raise ValueError(f"Blocked redirect to non-public URL: {self.driver.current_url}")
             self.driver.save_screenshot(path)
             print(f"  ✅ Screenshot saved: {path}")
         except Exception as e:
@@ -119,8 +127,15 @@ class SearchEngine:
             self.setup_driver()
 
         try:
+            if not is_public_http_url(url):
+                print(f"  ❌ Blocked non-public URL: {url}")
+                return ""
             self.driver.get(url)
             time.sleep(5) # Give page time to load and execute JS
+            # Re-check after redirects so a public URL can't bounce to an internal address
+            if not is_public_http_url(self.driver.current_url):
+                print(f"  ❌ Blocked redirect to non-public URL: {self.driver.current_url}")
+                return ""
             html_content = self.driver.page_source
             return html_content
         except Exception as e:

@@ -13,6 +13,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from search_engine import SearchEngine
+from url_safety import is_public_http_url
 
 
 def _take_screenshot_sync(url: str, path: str):
@@ -39,6 +40,14 @@ async def handle_screenshot(supabase: Client, report: dict):
         return
 
     print(f"[{report_id}] Starting screenshot for URL: {url}")
+
+    if not await asyncio.to_thread(is_public_http_url, url):
+        print(f"[{report_id}] Rejected non-public URL: {url}")
+        await supabase.table('report_requests').update({
+            'status': 'error',
+            'reason': "Only public http(s) URLs can be reported."
+        }).eq('id', report_id).execute()
+        return
     
     # Create a temporary file path, ensuring it's closed so other processes can write to it.
     tmp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
