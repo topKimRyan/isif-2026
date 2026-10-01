@@ -73,9 +73,16 @@ Current connection settings:
 
 1. Find an illegal site on the dashboard
 2. Click the Details button to review the AI reasoning
-3. Copy the URL and report it to the relevant authority:
-   - Cybercrime reporting: https://ecrm.police.go.kr/
-   - Korea Communications Standards Commission: https://www.kocsc.or.kr/
+3. Copy the URL and report it to the relevant authority in your jurisdiction:
+   - **South Korea**
+     - Korean National Police Agency (Cybercrime Reporting): https://ecrm.police.go.kr/
+     - Korea Communications Standards Commission: https://www.kocsc.or.kr/
+   - **United States**
+     - FBI Internet Crime Complaint Center (IC3): https://www.ic3.gov/
+   - **United Kingdom**
+     - Gambling Commission (report illegal gambling): https://www.gamblingcommission.gov.uk/
+   - **International / other countries**
+     - Contact your national gambling regulator or cybercrime unit
 
 ## Notes
 
