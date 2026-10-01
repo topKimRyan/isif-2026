@@ -17,7 +17,10 @@ class GamblingDomainCrawler:
 
         self.settings = self._load_settings(settings_file)
         self.keyword_manager = KeywordManager()
-        self.search_engine = SearchEngine(headless=self.settings.get("headless_mode", True))
+        self.search_engine = SearchEngine(
+            headless=self.settings.get("headless_mode", True),
+            captcha_wait_seconds=self.settings.get("captcha_wait_seconds", 300),
+        )
         self.url_extractor = URLExtractor(
             remove_tracking_params=self.settings.get("remove_tracking_params", True)
         )

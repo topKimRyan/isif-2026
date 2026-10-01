@@ -110,6 +110,7 @@ The crawler is controlled via `settings.json`:
 - `remove_tracking_params`: Strip tracking parameters from visited URLs (true/false)
 - `use_gemini_classifier`: Enable Gemini-based URL classification (true/false)
 - `combine_keywords`: Also search every 2-keyword pair (true/false). With N keywords this adds N·(N−1)/2 searches, so keep it off for long keyword lists
+- `captcha_wait_seconds`: When Google shows a CAPTCHA, how long to wait for you to solve it by hand in the visible Chrome window (requires `headless_mode: false`); the keyword is skipped if it isn't solved in time
 
 **Note:** API keys and database credentials are managed via the `.env` file (not `settings.json`).
 

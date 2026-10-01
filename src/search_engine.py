@@ -18,8 +18,9 @@ except ImportError:  # Imported as a top-level module by report_page/server hand
 
 
 class SearchEngine:
-    def __init__(self, headless: bool = True):
+    def __init__(self, headless: bool = True, captcha_wait_seconds: int = 300):
         self.headless = headless
+        self.captcha_wait_seconds = captcha_wait_seconds
         self.driver = None
 
         # News/reference site domains to exclude from results (matched against the hostname,
@@ -163,18 +164,43 @@ class SearchEngine:
         random_delay = random.uniform(2, 4)
         time.sleep(random_delay)
 
+        if self._is_captcha_page():
+            self._wait_for_manual_captcha()
+
         try:
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div#search"))
             )
         except TimeoutException:
-            if "/sorry/" in self.driver.current_url:
-                raise RuntimeError("Google blocked the search with a CAPTCHA; try a longer delay_between_searches")
-            raise
+            if self._is_captcha_page():
+                self._wait_for_manual_captcha()
+            else:
+                raise
 
         time.sleep(random.uniform(1, 2))
 
         return self.driver.page_source
+
+    def _is_captcha_page(self) -> bool:
+        return "/sorry/" in self.driver.current_url
+
+    def _wait_for_manual_captcha(self):
+        """Pauses until the user solves Google's CAPTCHA in the visible browser window."""
+        if self.headless:
+            raise RuntimeError(
+                "Google blocked the search with a CAPTCHA. Set headless_mode to false to solve it manually."
+            )
+
+        print(f"\a  🧩 Google CAPTCHA detected. Solve it in the Chrome window "
+              f"(waiting up to {self.captcha_wait_seconds}s)...")
+        try:
+            WebDriverWait(self.driver, self.captcha_wait_seconds, poll_frequency=2).until(
+                lambda driver: not self._is_captcha_page()
+                and driver.find_elements(By.CSS_SELECTOR, "div#search")
+            )
+        except TimeoutException:
+            raise RuntimeError("CAPTCHA was not solved in time; skipping this keyword")
+        print("  ✅ CAPTCHA solved, continuing")
 
     def visit_search_result_links(self, max_links: int = 10) -> list:
         """
