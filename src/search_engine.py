@@ -1,6 +1,7 @@
 import time
 import random
 import os
+from urllib.parse import quote_plus, urlparse
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -20,15 +21,24 @@ class SearchEngine:
         self.headless = headless
         self.driver = None
 
-        # List of news site domains to exclude from results
-        self.news_domains = [
-            'news.', 'naver.com', 'daum.net', 'joins.com', 'chosun.com',
+        # News/reference site domains to exclude from results (matched against the hostname,
+        # including subdomains). Hosts starting with "news." are excluded as well.
+        self.excluded_domains = [
+            # Korean news portals and outlets
+            'naver.com', 'daum.net', 'joins.com', 'chosun.com',
             'donga.com', 'khan.co.kr', 'hankyung.com', 'mk.co.kr',
             'yna.co.kr', 'newsis.com', 'ytn.co.kr', 'sbs.co.kr',
             'kbs.co.kr', 'mbc.co.kr', 'jtbc.co.kr', 'mt.co.kr',
             'sedaily.com', 'seoul.co.kr', 'hani.co.kr', 'kmib.co.kr',
             'segye.com', 'fnnews.com', 'newsway.co.kr', 'journalist.or.kr',
-            'youtube.com', 'youtu.be'
+            # International news outlets
+            'bbc.com', 'bbc.co.uk', 'cnn.com', 'reuters.com', 'apnews.com', 'nytimes.com',
+            'theguardian.com', 'washingtonpost.com', 'wsj.com', 'ft.com',
+            'bloomberg.com', 'forbes.com', 'cnbc.com', 'usatoday.com',
+            'npr.org', 'aljazeera.com', 'independent.co.uk', 'telegraph.co.uk',
+            'espn.com', 'nikkei.com', 'scmp.com',
+            # Reference, video, and community sites
+            'wikipedia.org', 'reddit.com', 'youtube.com', 'youtu.be'
         ]
 
     def setup_driver(self):
@@ -159,7 +169,7 @@ class SearchEngine:
             self.driver = None
             self.setup_driver()
 
-        search_url = f"https://www.google.com/search?q={keyword}"
+        search_url = f"https://www.google.com/search?q={quote_plus(keyword)}"
         self.driver.get(search_url)
 
         # Random delay to avoid bot detection
@@ -176,7 +186,7 @@ class SearchEngine:
 
     def visit_search_result_links(self, max_links: int = 10) -> list:
         """
-        Finds links in the search results page, visits each one, and collects HTML.
+        Collects links from the search results page, then visits each one and collects HTML.
 
         Args:
             max_links: maximum number of links to visit
@@ -187,85 +197,58 @@ class SearchEngine:
         results = []
 
         try:
-            # Find link elements within the rso (search results) area
+            # Read all hrefs up front: element references go stale once the browser navigates away
             rso_element = self.driver.find_element(By.ID, "rso")
-            link_elements = rso_element.find_elements(By.TAG_NAME, "a")
-
-            # Filter for valid links (must have href starting with http)
-            valid_links = []
-            for link_element in link_elements:
-                href = link_element.get_attribute("href")
-                if href and (href.startswith("http://") or href.startswith("https://")):
-                    # Exclude Google internal links and data: URLs
-                    if "google.com" not in href and not href.startswith("data:"):
-                        # Exclude news sites
-                        is_news_site = any(news_domain in href for news_domain in self.news_domains)
-                        print("#####", href, is_news_site)
-                        if not is_news_site:
-                            valid_links.append(link_element)
-                        else:
-                            print(f"    ⏭️ Skipping news site: {href}")
-
-            links_to_visit = valid_links[:max_links]
-            print(f"  📋 Found {len(valid_links)} valid links, visiting {len(links_to_visit)}")
-
-            for i, link_element in enumerate(links_to_visit, 1):
-                try:
-                    # Save URL before clicking (becomes inaccessible after navigation)
-                    target_url = link_element.get_attribute("href")
-                    print(f"    [{i}/{len(links_to_visit)}] 🔗 Clicking: {target_url}")
-
-                    link_element.click()
-
-                    time.sleep(random.uniform(2, 3))
-
-                    current_url = self.driver.current_url
-                    html_content = self.driver.page_source
-
-                    results.append((current_url, html_content))
-                    print(f"    ✅ HTML collected: {current_url}")
-
-                    is_last_link = (i == len(links_to_visit))
-                    self.driver.back()
-
-                    time.sleep(random.uniform(1, 2))
-                    WebDriverWait(self.driver, 10).until(
-                        EC.presence_of_element_located((By.ID, "rso"))
-                    )
-
-                    if not is_last_link:
-                        # Re-fetch links since the page reloaded
-                        rso_element = self.driver.find_element(By.ID, "rso")
-                        link_elements = rso_element.find_elements(By.TAG_NAME, "a")
-
-                        valid_links = []
-                        for link_element in link_elements:
-                            href = link_element.get_attribute("href")
-                            if href and (href.startswith("http://") or href.startswith("https://")):
-                                if "google.com" not in href and not href.startswith("data:"):
-                                    is_news_site = any(news_domain in href for news_domain in self.news_domains)
-                                    if not is_news_site:
-                                        valid_links.append(link_element)
-
-                        links_to_visit = valid_links[:max_links]
-
-                except Exception as e:
-                    print(f"    ❌ Error visiting link: {e}")
-                    try:
-                        self.driver.back()
-                        time.sleep(1)
-                        WebDriverWait(self.driver, 5).until(
-                            EC.presence_of_element_located((By.ID, "rso"))
-                        )
-                    except:
-                        print(f"    ⚠️ Failed to return to search results page")
-                        pass
-                    continue
-
+            hrefs = [a.get_attribute("href") for a in rso_element.find_elements(By.TAG_NAME, "a")]
         except Exception as e:
             print(f"  ❌ Error finding search result links: {e}")
+            return results
+
+        links_to_visit = []
+        seen = set()
+        for href in hrefs:
+            if not href or not href.startswith(("http://", "https://")):
+                continue
+            # Skip repeated links to the same page (e.g. title link + sitelinks)
+            key = href.split("#")[0].rstrip("/")
+            if key in seen:
+                continue
+            seen.add(key)
+            if self._is_excluded_host(urlparse(href).hostname):
+                print(f"    ⏭️ Skipping excluded site: {href}")
+                continue
+            links_to_visit.append(href)
+
+        print(f"  📋 Found {len(links_to_visit)} valid links, visiting {min(len(links_to_visit), max_links)}")
+        links_to_visit = links_to_visit[:max_links]
+
+        for i, target_url in enumerate(links_to_visit, 1):
+            try:
+                print(f"    [{i}/{len(links_to_visit)}] 🔗 Visiting: {target_url}")
+                self.driver.get(target_url)
+                time.sleep(random.uniform(2, 3))
+
+                current_url = self.driver.current_url
+                html_content = self.driver.page_source
+
+                results.append((current_url, html_content))
+                print(f"    ✅ HTML collected: {current_url}")
+            except Exception as e:
+                print(f"    ❌ Error visiting link {target_url}: {e}")
 
         return results
+
+    def _is_excluded_host(self, hostname: str) -> bool:
+        """Returns True for search engine, news, and reference hosts that should not be crawled."""
+        if not hostname:
+            return True
+        hostname = hostname.lower()
+        if hostname.startswith("news."):
+            return True
+        # Google's own pages (google.com, google.co.kr, support.google.com, ...)
+        if any(part == "google" for part in hostname.split(".")) or hostname.endswith("googleusercontent.com"):
+            return True
+        return any(hostname == domain or hostname.endswith("." + domain) for domain in self.excluded_domains)
 
     def close(self):
         if self.driver:
