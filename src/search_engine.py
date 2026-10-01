@@ -9,6 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 try:
     from .url_safety import is_public_http_url
@@ -176,9 +177,14 @@ class SearchEngine:
         random_delay = random.uniform(2, 4)
         time.sleep(random_delay)
 
-        WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div#search"))
-        )
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div#search"))
+            )
+        except TimeoutException:
+            if "/sorry/" in self.driver.current_url:
+                raise RuntimeError("Google blocked the search with a CAPTCHA; try a longer delay_between_searches")
+            raise
 
         time.sleep(random.uniform(1, 2))
 

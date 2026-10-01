@@ -134,43 +134,57 @@ class GamblingDomainCrawler:
         max_links_per_search = self.settings.get("max_links_per_search", 10)
         existing_urls = self.storage.get_existing_urls()
 
-        for i, keyword in enumerate(keywords, 1):
-            print(f"\n🔎 [{i}/{len(keywords)}] Searching keyword: {keyword}")
+        try:
+            for i, keyword in enumerate(keywords, 1):
+                print(f"\n🔎 [{i}/{len(keywords)}] Searching keyword: {keyword}")
 
-            self.search_engine.search_google(keyword)
+                try:
+                    self._process_keyword(keyword, max_links_per_search, existing_urls)
+                except Exception as e:
+                    # One failed search (e.g. CAPTCHA or timeout) should not stop the whole crawl
+                    print(f"  ❌ Search failed for keyword '{keyword}': {e!r}")
 
-            visited_results = self.search_engine.visit_search_result_links(max_links=max_links_per_search)
+                if i < len(keywords):
+                    print(f"  ⏳ Waiting {delay}s before next search...")
+                    time.sleep(delay)
+        finally:
+            self.search_engine.close()
 
-            if visited_results:
-                print(f"  📄 Visited {len(visited_results)} links")
-
-                new_visited_results = [
-                    (url, html) for url, html in visited_results
-                    if url not in existing_urls
-                ]
-
-                if new_visited_results:
-                    print(f"  🆕 Found {len(new_visited_results)} new URLs")
-
-                    filtered_urls, classification_results = self._classify_visited_results(new_visited_results)
-
-                    if filtered_urls:
-                        self.storage.save_results(filtered_urls, keyword, classification_results)
-                        existing_urls.update(filtered_urls)
-                        print(f"  💾 Saved {len(filtered_urls)} illegal gambling sites (keyword: {keyword})")
-                    else:
-                        print(f"  ℹ️ No illegal gambling sites found (keyword: {keyword})")
-                else:
-                    print(f"  ℹ️ No new URLs (keyword: {keyword})")
-            else:
-                print(f"  ⚠️ No links visited (keyword: {keyword})")
-
-            if i < len(keywords):
-                print(f"  ⏳ Waiting {delay}s before next search...")
-                time.sleep(delay)
-
-        self.search_engine.close()
         self._print_final_stats()
+
+    def _process_keyword(self, keyword: str, max_links_per_search: int, existing_urls: set):
+        self.search_engine.search_google(keyword)
+
+        visited_results = self.search_engine.visit_search_result_links(max_links=max_links_per_search)
+
+        if not visited_results:
+            print(f"  ⚠️ No links visited (keyword: {keyword})")
+            return
+
+        print(f"  📄 Visited {len(visited_results)} links")
+
+        # Skip known URLs, and duplicates within this batch (different links can redirect to the same page)
+        new_visited_results = []
+        batch_urls = set()
+        for url, html in visited_results:
+            if url not in existing_urls and url not in batch_urls:
+                batch_urls.add(url)
+                new_visited_results.append((url, html))
+
+        if not new_visited_results:
+            print(f"  ℹ️ No new URLs (keyword: {keyword})")
+            return
+
+        print(f"  🆕 Found {len(new_visited_results)} new URLs")
+
+        filtered_urls, classification_results = self._classify_visited_results(new_visited_results)
+
+        if filtered_urls:
+            self.storage.save_results(filtered_urls, keyword, classification_results)
+            existing_urls.update(filtered_urls)
+            print(f"  💾 Saved {len(filtered_urls)} illegal gambling sites (keyword: {keyword})")
+        else:
+            print(f"  ℹ️ No illegal gambling sites found (keyword: {keyword})")
 
     def _print_final_stats(self):
         stats = self.storage.get_stats()
