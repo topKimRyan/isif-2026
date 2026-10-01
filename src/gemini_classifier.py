@@ -135,6 +135,10 @@ Response format (return JSON only):
   "detected_keywords": ["keyword1", "keyword2"]
 }}
 
+Language requirements:
+- Write the "reason" field in English only, even if the website content is in another language.
+- In "detected_keywords", write English keywords as-is. For non-English keywords, keep the original term and add an English translation in parentheses, e.g. "바카라 (baccarat)".
+
 Be accurate and objective. Return only the JSON with no additional text."""
 
         return prompt
