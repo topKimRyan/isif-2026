@@ -157,17 +157,25 @@ Be accurate and objective. Return only the JSON with no additional text."""
 
             result = json.loads(cleaned_response)
 
-            confidence = result.get("confidence", 0.0)
-            if not isinstance(confidence, (int, float)):
-                confidence = 0.0
-            result["confidence"] = max(0.0, min(1.0, confidence))
+        except json.JSONDecodeError as e:
+            # Raise so classify_url reports an error instead of a silent "not illegal" verdict
+            raise ValueError(f"Failed to parse Gemini response as JSON: {response_text[:200]!r}") from e
 
-            return result
+        if not isinstance(result, dict) or "is_illegal" not in result:
+            raise ValueError(f"Gemini response is missing 'is_illegal': {response_text[:200]!r}")
 
-        except json.JSONDecodeError:
-            return {
-                "is_illegal": False,
-                "confidence": 0.0,
-                "reason": "Failed to parse response",
-                "detected_keywords": [],
-            }
+        is_illegal = result["is_illegal"]
+        if isinstance(is_illegal, str):
+            is_illegal = is_illegal.strip().lower() == "true"
+        result["is_illegal"] = bool(is_illegal)
+
+        try:
+            confidence = float(result.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        result["confidence"] = max(0.0, min(1.0, confidence))
+
+        keywords = result.get("detected_keywords")
+        result["detected_keywords"] = [str(k) for k in keywords] if isinstance(keywords, list) else []
+
+        return result
