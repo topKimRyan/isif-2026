@@ -206,3 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 results.json
+
+# Local virtual environment and personal Claude Code settings
+main/
+.claude/settings.local.json
