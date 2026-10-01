@@ -53,9 +53,15 @@ class DatabaseManager:
             gemini_reason TEXT,
             gemini_error TEXT,
             detected_keywords JSONB,
+            screenshot_url TEXT,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
+        """
+
+        # screenshot_url is written by the report worker; add it to tables created before it existed
+        add_screenshot_column = """
+        ALTER TABLE gambling_urls ADD COLUMN IF NOT EXISTS screenshot_url TEXT;
         """
 
         # Index on url for fast lookups
@@ -103,6 +109,7 @@ class DatabaseManager:
         """
 
         self.cursor.execute(create_table_query)
+        self.cursor.execute(add_screenshot_column)
         self.cursor.execute(create_index_url)
         self.cursor.execute(create_index_illegal)
         self.cursor.execute(create_index_collected)
