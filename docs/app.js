@@ -97,7 +97,7 @@ function renderTable(sites) {
                 <img class="favicon"
                      src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}"
                      alt=""
-                     onerror="this.outerHTML='<span class=\'favicon-placeholder\'>🌐</span>'">
+                     onerror="this.replaceWith(Object.assign(document.createElement('span'), {className: 'favicon-placeholder', textContent: '🌐'}))">
             </td>
             <td class="url-cell">
                 <a href="${escapeHtml(safeUrl(site.url))}" target="_blank" rel="noopener noreferrer" class="url-link"
