@@ -210,3 +210,6 @@ results.json
 # Local virtual environment and personal Claude Code settings
 main/
 .claude/settings.local.json
+
+# Cloudflare Pages build output (scripts/build_site.sh)
+dist/

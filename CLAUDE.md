@@ -78,6 +78,13 @@ python worker.py
 python -m http.server 3001 --directory docs
 ```
 
+### Deployment (Cloudflare Pages)
+The report service and dashboard are deployed together as one static site:
+- Build command: `bash scripts/build_site.sh` → output directory `dist` (`/` = report service, `/dashboard/` = dashboard)
+- The build copies only browser files; `report_page/server/` is not published
+- The worker (`report_page/server/worker.py`) needs Python + Chrome and is **not** hosted on Cloudflare; run it on a PC or server
+- Supabase access rules for the public anon key live in `supabase/security.sql` (run it in the Supabase SQL editor)
+
 ### Tests
 There is no automated test suite yet.
 
