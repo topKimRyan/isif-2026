@@ -2,7 +2,8 @@ import json
 import os
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from bs4 import BeautifulSoup
 import re
 
@@ -28,8 +29,8 @@ class GeminiClassifier:
                 "Gemini API key not found. Set GEMINI_API_KEY in your .env file or pass it via the api_key parameter."
             )
 
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
+        self.client = genai.Client(api_key=self.api_key)
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     def classify_url(self, url: str, html_content: str) -> Dict[str, Any]:
         """
@@ -57,9 +58,16 @@ class GeminiClassifier:
                 cleaned_html = cleaned_html[:50000]
 
             prompt = self._build_prompt(url, cleaned_html)
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                # Ask for raw JSON so the response can be parsed reliably
+                config=types.GenerateContentConfig(response_mime_type="application/json"),
+            )
 
             response_text = response.text
+            if not response_text:
+                raise ValueError("Gemini returned an empty response (it may have been blocked)")
             result = self._parse_response(response_text)
 
             return {
