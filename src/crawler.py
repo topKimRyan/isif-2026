@@ -76,8 +76,10 @@ class GamblingDomainCrawler:
     def crawl(self):
         print("🚀 Starting illegal gambling site crawler...")
 
-        keywords = self.keyword_manager.generate_combinations()
-        print(f"📋 Generated {len(keywords)} keyword combinations")
+        keywords = self.keyword_manager.generate_combinations(
+            include_pairs=self.settings.get("combine_keywords", True)
+        )
+        print(f"📋 Generated {len(keywords)} search queries")
 
         delay = self.settings.get("delay_between_searches", 2)
         max_links_per_search = self.settings.get("max_links_per_search", 10)

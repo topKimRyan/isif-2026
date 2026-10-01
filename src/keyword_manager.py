@@ -21,13 +21,15 @@ class KeywordManager:
             print(f"Invalid JSON format in {self.keywords_file}")
             return []
 
-    def generate_combinations(self) -> List[str]:
+    def generate_combinations(self, include_pairs: bool = True) -> List[str]:
+        """Returns each keyword, plus every 2-keyword pair when include_pairs is True."""
         if not self.keywords:
             self.load_keywords()
 
         all_keywords = self.keywords.copy()
 
-        for combo in combinations(self.keywords, 2):
-            all_keywords.append(" ".join(combo))
+        if include_pairs:
+            for combo in combinations(self.keywords, 2):
+                all_keywords.append(" ".join(combo))
 
         return all_keywords

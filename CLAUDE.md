@@ -109,6 +109,7 @@ The crawler is controlled via `settings.json`:
 - `output_file`: Path to store collected URLs (default: "results.json")
 - `remove_tracking_params`: Strip tracking parameters from visited URLs (true/false)
 - `use_gemini_classifier`: Enable Gemini-based URL classification (true/false)
+- `combine_keywords`: Also search every 2-keyword pair (true/false). With N keywords this adds N·(N−1)/2 searches, so keep it off for long keyword lists
 
 **Note:** API keys and database credentials are managed via the `.env` file (not `settings.json`).
 
