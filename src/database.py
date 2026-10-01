@@ -27,7 +27,7 @@ class DatabaseManager:
         """Establish database connection."""
         self.connection = psycopg2.connect(**self.connection_params)
         self.cursor = self.connection.cursor()
-        self.cursor.execute("SET TIME ZONE 'Asia/Seoul'")
+        self.cursor.execute("SET TIME ZONE 'UTC'")
         print(f"✅ Database connected: {self.connection_params['host']}")
 
     def disconnect(self):

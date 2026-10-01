@@ -2,9 +2,9 @@
 import asyncio
 from supabase import Client
 from postgrest import APIResponse
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
-KST = timezone(timedelta(hours=9))
+UTC = timezone.utc
 
 async def upsert_illegal_site(supabase: Client, report: dict):
     """
@@ -34,7 +34,7 @@ async def upsert_illegal_site(supabase: Client, report: dict):
             current_count = existing_entry.get('report_count', 0)
             
             update_data = {
-                'updated_at': datetime.now(KST).isoformat(),
+                'updated_at': datetime.now(UTC).isoformat(),
                 'report_count': current_count + 1,
                 'last_report_reason': reason,
                 'last_detected_keywords': keywords
@@ -92,7 +92,7 @@ async def log_final_report(supabase: Client, report: dict):
             'detected_keywords': detected_keywords,  # Use actual detected_keywords
             'keyword_used': 'manual report', # Add non-null value for keyword_used
             'screenshot_url': screenshot_url,
-            'collected_at': datetime.now(KST).isoformat(),
+            'collected_at': datetime.now(UTC).isoformat(),
         }
         await supabase.table('gambling_urls').insert(insert_data).execute()
         print(f"[{report_id}] Created new entry in 'gambling_urls' for URL: {report_url} with manual keywords.")

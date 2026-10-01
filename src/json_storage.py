@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 
 
@@ -9,8 +9,8 @@ class JSONStorage:
         self.output_file = output_file
 
     def save_results(self, urls: List[str], keyword: str, classification_results: List[Dict[str, Any]] = None) -> None:
-        kst = timezone(timedelta(hours=9))
-        timestamp = datetime.now(kst).isoformat()
+        utc = timezone.utc
+        timestamp = datetime.now(utc).isoformat()
 
         new_entries = []
         for i, url in enumerate(urls):
