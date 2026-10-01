@@ -65,7 +65,7 @@ python -m http.server 8000
 Fetches illegal site data from the `gambling_urls` table in Supabase in real time.
 
 Current connection settings:
-- URL: `https://brdwgsnffgsmubnfjmyi.supabase.co`
+- URL: `https://pimnyvbggbobuvnyezga.supabase.co`
 - Table: `gambling_urls`
 - Filter: `is_illegal = true`
 
