@@ -47,10 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <form id="confirmation-form">
                     <label for="site-url-confirm">Site URL</label>
-                    <input type="url" id="site-url-confirm" name="site-url" value="${url}" readonly>
+                    <input type="url" id="site-url-confirm" name="site-url" value="${escapeHtml(url)}" readonly>
                     <label for="reason-confirm">Reason</label>
-                    <textarea id="reason-confirm" name="reason" rows="4" readonly>${reason || ''}</textarea>
-                    ${(keywords && keywords.length > 0) ? `<h3>Detected Keywords</h3><ul class="keyword-list">${keywords.map(k => `<li>${k}</li>`).join('')}</ul>` : ''}
+                    <textarea id="reason-confirm" name="reason" rows="4" readonly>${escapeHtml(reason || '')}</textarea>
+                    ${(keywords && keywords.length > 0) ? `<h3>Detected Keywords</h3><ul class="keyword-list">${keywords.map(k => `<li>${escapeHtml(k)}</li>`).join('')}</ul>` : ''}
                 </form>
             `;
             buttonsHTML = `
@@ -71,9 +71,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <form id="confirmation-form">
                     <label for="site-url-confirm">Site URL</label>
-                    <input type="url" id="site-url-confirm" name="site-url" value="${url}" readonly>
+                    <input type="url" id="site-url-confirm" name="site-url" value="${escapeHtml(url)}" readonly>
                     <label for="reason-confirm">Reason</label>
-                    <textarea id="reason-confirm" name="reason" rows="4" readonly>${reason || ''}</textarea>
+                    <textarea id="reason-confirm" name="reason" rows="4" readonly>${escapeHtml(reason || '')}</textarea>
                 </form>
             `;
             buttonsHTML = `<button type="button" class="btn-primary" id="exit-button">Exit</button>`;

@@ -88,21 +88,21 @@ function renderTable(sites) {
         const confVal = (site.gemini_confidence || 0);
         const fillClass = confClass.replace('confidence-', 'fill-');
         const keywordLabel = site.keyword_used
-            ? `<span class="keyword-chip">${site.keyword_used}</span>`
+            ? `<span class="keyword-chip">${escapeHtml(site.keyword_used)}</span>`
             : '<span style="color:var(--text-3)">—</span>';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
                 <img class="favicon"
-                     src="https://www.google.com/s2/favicons?sz=32&domain=${domain}"
+                     src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}"
                      alt=""
                      onerror="this.outerHTML='<span class=\'favicon-placeholder\'>🌐</span>'">
             </td>
             <td class="url-cell">
-                <a href="${site.url}" target="_blank" rel="noopener noreferrer" class="url-link"
-                   title="${site.url}">
-                    ${truncateUrl(site.url, 55)}
+                <a href="${escapeHtml(safeUrl(site.url))}" target="_blank" rel="noopener noreferrer" class="url-link"
+                   title="${escapeHtml(site.url)}">
+                    ${escapeHtml(truncateUrl(site.url, 55))}
                 </a>
             </td>
             <td>${keywordLabel}</td>
@@ -145,13 +145,13 @@ function showDetail(index) {
     const confVal   = (site.gemini_confidence || 0).toFixed(2);
 
     const keywordTags = (site.detected_keywords && site.detected_keywords.length > 0)
-        ? site.detected_keywords.map(k => `<span class="keyword-tag">${k}</span>`).join('')
+        ? site.detected_keywords.map(k => `<span class="keyword-tag">${escapeHtml(k)}</span>`).join('')
         : '<span style="color:var(--text-3)">None detected</span>';
 
     const screenshotHTML = site.screenshot_url
         ? `<div class="modal-section">
                <div class="modal-label">Screenshot</div>
-               <div class="modal-value"><img src="${site.screenshot_url}" alt="Screenshot" class="screenshot-img"></div>
+               <div class="modal-value"><img src="${escapeHtml(safeUrl(site.screenshot_url))}" alt="Screenshot" class="screenshot-img"></div>
            </div><hr class="modal-divider">`
         : '';
 
@@ -159,14 +159,14 @@ function showDetail(index) {
         <div class="modal-section">
             <div class="modal-label">URL</div>
             <div class="modal-value">
-                <a href="${site.url}" target="_blank" rel="noopener noreferrer" class="url-link">${site.url}</a>
+                <a href="${escapeHtml(safeUrl(site.url))}" target="_blank" rel="noopener noreferrer" class="url-link">${escapeHtml(site.url)}</a>
             </div>
         </div>
         <hr class="modal-divider">
         ${screenshotHTML}
         <div class="modal-section">
             <div class="modal-label">Search Keyword</div>
-            <div class="modal-value">${site.keyword_used || '—'}</div>
+            <div class="modal-value">${escapeHtml(site.keyword_used || '—')}</div>
         </div>
         <div class="modal-section">
             <div class="modal-label">Confidence Score</div>
@@ -181,7 +181,7 @@ function showDetail(index) {
         <hr class="modal-divider">
         <div class="modal-section">
             <div class="modal-label">AI Reasoning</div>
-            <div class="modal-value">${site.gemini_reason || 'No reasoning provided.'}</div>
+            <div class="modal-value">${escapeHtml(site.gemini_reason || 'No reasoning provided.')}</div>
         </div>
         <div class="modal-section">
             <div class="modal-label">Detected Keywords</div>
@@ -200,12 +200,33 @@ window.addEventListener('click', (e) => {
     if (e.target === document.getElementById('detail-modal')) closeModal();
 });
 
+// Escape text before inserting it into innerHTML (AI output and URLs are untrusted)
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Only allow http(s) links so stored URLs like "javascript:..." can't run code
+function safeUrl(url) {
+    try {
+        const parsed = new URL(url);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '#';
+    } catch {
+        return '#';
+    }
+}
+
 function extractDomain(url) {
     try { return new URL(url).hostname; }
     catch { return ''; }
 }
 
 function truncateUrl(url, max) {
+    url = String(url ?? '');
     return url.length <= max ? url : url.slice(0, max) + '…';
 }
 

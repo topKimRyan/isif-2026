@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentKeywords.forEach((keyword, index) => {
                 const item = document.createElement('div');
                 item.className = 'keyword-item';
-                item.innerHTML = `<span>${keyword}</span><button type="button" class="delete-keyword" data-index="${index}"><i class="fi fi-sr-cross-small"></i></button>`;
+                item.innerHTML = `<span>${escapeHtml(keyword)}</span><button type="button" class="delete-keyword" data-index="${index}"><i class="fi fi-sr-cross-small"></i></button>`;
                 keywordListEditable.appendChild(item);
             });
             // Re-add event listeners for delete buttons
