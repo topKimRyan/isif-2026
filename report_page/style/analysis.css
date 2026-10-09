@@ -1,4 +1,5 @@
 .centered-main {
+    background: radial-gradient(380px 380px at 50% 38%, rgba(78, 103, 246, 0.10), transparent 70%);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -19,6 +20,7 @@
     width: 100px; /* Adjusted size */
     height: 100px; /* Adjusted size */
     margin-bottom: 40px; /* Adjusted space between icon group and text */
+    animation: breathe 2.4s ease-in-out infinite;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -29,7 +31,9 @@
     height: 170px; /* Adjusted size */
     animation: spin 2s linear infinite;
     position: absolute;
-    transform: translate(-50%, -50%); /* Center it perfectly within icon-group */
+    top: 50%;
+    left: 50%;
+    margin: -85px 0 0 -85px; /* Center without transform so the spin animation can own it */
     opacity: 1; /* Make it fully opaque */
     z-index: 2; /* Ensure spinner is above icon */
 }
@@ -54,18 +58,37 @@
 .text-content h1 {
     font-size: 24px;
     font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #0a1f44;
     margin-bottom: 10px; /* Adjusted */
 }
 
 .text-content p {
-    font-size: 16px;
-    color: #666;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #6c757d;
     margin-bottom: 50px; /* Increased margin */
 }
 
 .analysis-content button {
     width: 100%;
     max-width: 300px;
+}
+
+.analysis-content .btn-secondary {
+    background: #fff;
+    color: #6c757d;
+    border: 1.5px solid var(--medium-gray);
+}
+
+.analysis-content .btn-secondary:hover {
+    background: var(--light-gray);
+    color: var(--dark-gray);
+}
+
+@keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
 }
 
 @keyframes spin {

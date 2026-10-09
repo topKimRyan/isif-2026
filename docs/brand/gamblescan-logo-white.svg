@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 48" width="1000" height="192">
+<g transform="translate(4,4)">
+<rect width="40" height="40" rx="11" fill="#0a1f44"/>
+<path d="M20 8l9 3.4v7.2c0 5.6-3.8 9.6-9 11.4-5.2-1.8-9-5.8-9-11.4v-7.2z" fill="none" stroke="#e8cf94" stroke-width="1.8" stroke-linejoin="round"/>
+<path d="M15.5 19.5l3.2 3.2 5.8-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="56" y="31" font-family="Plus Jakarta Sans, Arial, sans-serif" font-weight="800" font-size="25" fill="#ffffff">Gamble<tspan fill="#c8213a">Scan</tspan></text>
+</svg>
