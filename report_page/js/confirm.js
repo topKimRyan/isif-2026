@@ -1,30 +1,25 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const reportId = params.get('id') || sessionStorage.getItem('report_id');
+    const auth = getReportAuth();
 
-    if (!reportId) {
+    if (!auth) {
         alert('No report information found. Redirecting to the main page.');
-        sessionStorage.removeItem('report_id'); // Clear session storage
+        clearReportAuth(); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
     }
 
     if (!supabaseClient) {
         alert('Failed to connect to the database.');
-        sessionStorage.removeItem('report_id'); // Clear session storage
+        clearReportAuth(); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
     }
 
     try {
-        const { data, error } = await supabaseClient
-            .from('report_requests')
-            .select('url, is_illegal, reason, detected_keywords')
-            .eq('id', reportId)
-            .single();
+        const data = await fetchReport(auth);
 
-        if (error || !data) {
-            throw error || new Error('Report data not found.');
+        if (!data) {
+            throw new Error('Report data not found.');
         }
 
         const { url, is_illegal, reason, detected_keywords: keywords } = data;
@@ -92,16 +87,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (reportButton) {
             reportButton.addEventListener('click', async () => {
                 try {
-                    const { error } = await supabaseClient
-                        .from('report_requests')
-                        .update({ status: 'confirmed' })
-                        .eq('id', reportId);
+                    const confirmed = await reportRpc('confirm_report', { p_id: auth.id, p_token: auth.token });
 
-                    if (error) throw error;
-                    window.location.href = `reporting.html?id=${reportId}`;
+                    if (!confirmed) throw new Error('Report can no longer be confirmed.');
+                    window.location.href = `reporting.html?${reportQuery(auth)}`;
                 } catch (error) {
                     console.error('Error confirming report:', error);
-                    sessionStorage.removeItem('report_id');
+                    clearReportAuth();
                     window.location.href = 'report-error.html'; // Redirect to error page
                 }
             });
@@ -110,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const editButton = document.getElementById('edit-button');
         if (editButton) {
             editButton.addEventListener('click', () => {
-                window.location.href = `edit-report.html?id=${reportId}`;
+                window.location.href = `edit-report.html?${reportQuery(auth)}`;
             });
         }
 
@@ -118,13 +110,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (cancelConfirmButton) {
             cancelConfirmButton.addEventListener('click', async () => {
                 try {
-                    const { error } = await supabaseClient.from('report_requests').update({ status: 'cancel' }).eq('id', reportId);
-                    if (error) throw error;
-                    sessionStorage.removeItem('report_id');
+                    await reportRpc('cancel_report', { p_id: auth.id, p_token: auth.token });
+                    clearReportAuth();
                     window.location.href = 'index.html';
                 } catch(error) {
                     console.error('Error cancelling report:', error);
-                    sessionStorage.removeItem('report_id');
+                    clearReportAuth();
                     window.location.href = 'report-error.html'; // Redirect to error page
                 }
             });
@@ -133,14 +124,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const exitButton = document.getElementById('exit-button');
         if (exitButton) {
             exitButton.addEventListener('click', () => {
-                sessionStorage.removeItem('report_id');
+                clearReportAuth();
                 window.location.href = 'index.html';
             });
         }
 
     } catch (error) {
         console.error('Error fetching report details:', error);
-        sessionStorage.removeItem('report_id');
+        clearReportAuth();
         window.location.href = 'report-error.html'; // Redirect to error page
     }
 });

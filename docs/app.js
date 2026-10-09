@@ -27,7 +27,8 @@ async function loadData() {
     try {
         const { data, error } = await supabaseClient
             .from('gambling_urls')
-            .select('*')
+            // Only the columns the public dashboard may read (see supabase/security.sql)
+            .select('url, keyword_used, gemini_confidence, collected_at, detected_keywords, screenshot_url, gemini_reason, is_illegal')
             .eq('is_illegal', true)
             .order('collected_at', { ascending: false });
 

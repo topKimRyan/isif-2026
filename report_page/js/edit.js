@@ -1,30 +1,25 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const params = new URLSearchParams(window.location.search);
-    const reportId = params.get('id') || sessionStorage.getItem('report_id');
+    const auth = getReportAuth();
 
-    if (!reportId) {
+    if (!auth) {
         alert('No report information found. Redirecting to the main page.');
-        sessionStorage.removeItem('report_id'); // Clear session storage
+        clearReportAuth(); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
     }
 
     if (!supabaseClient) {
         alert('Failed to connect to the database.');
-        sessionStorage.removeItem('report_id'); // Clear session storage
+        clearReportAuth(); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
         return;
     }
 
     try {
-        const { data, error } = await supabaseClient
-            .from('report_requests')
-            .select('reason, detected_keywords')
-            .eq('id', reportId)
-            .single();
+        const data = await fetchReport(auth);
 
-        if (error || !data) {
-            throw error || new Error('Report data not found.');
+        if (!data) {
+            throw new Error('Report data not found.');
         }
 
         const editReasonTextarea = document.getElementById('reason');
@@ -78,33 +73,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         confirmEditButton.addEventListener('click', async () => {
             try {
-                const { error } = await supabaseClient
-                    .from('report_requests')
-                    .update({
-                        reason: editReasonTextarea.value,
-                        detected_keywords: currentKeywords
-                    })
-                    .eq('id', reportId);
+                const updated = await reportRpc('update_report_details', {
+                    p_id: auth.id,
+                    p_token: auth.token,
+                    p_reason: editReasonTextarea.value,
+                    p_keywords: currentKeywords
+                });
 
-                if (error) throw error;
+                if (!updated) throw new Error('Report can no longer be edited.');
 
                 // Redirect back to confirm page
-                window.location.href = `report-confirm.html?id=${reportId}`;
+                window.location.href = `report-confirm.html?${reportQuery(auth)}`;
             } catch (e) {
                 console.error("Error updating report:", e);
-                sessionStorage.removeItem('report_id'); // Clear session storage
+                clearReportAuth(); // Clear session storage
                 window.location.href = 'report-error.html'; // Redirect to error page
             }
         });
 
         backToConfirmButton.addEventListener('click', (e) => {
             e.preventDefault();
-            window.location.href = `report-confirm.html?id=${reportId}`;
+            window.location.href = `report-confirm.html?${reportQuery(auth)}`;
         });
 
     } catch(error) {
         console.error('Error fetching report details for editing:', error);
-        sessionStorage.removeItem('report_id'); // Clear session storage
+        clearReportAuth(); // Clear session storage
         window.location.href = 'report-error.html'; // Redirect to error page
     }
 });

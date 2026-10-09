@@ -85,6 +85,7 @@ The report service and dashboard are deployed together as one static site:
 - The build copies only browser files; `report_page/server/` is not published
 - The worker (`report_page/server/worker.py`) needs Python + Chrome and is **not** hosted on Cloudflare; run it on a PC or server
 - Supabase access rules for the public anon key live in `supabase/security.sql` (run it in the Supabase SQL editor)
+- The report pages cannot read `report_requests` directly. They call database functions (`create_report`, `get_report`, `cancel_report`, `update_report_details`, `confirm_report`) with the report id plus the secret token from `create_report`, and poll `get_report` instead of using Realtime. New table access for the browser should go through a function the same way; only the worker (service role) touches the table directly
 
 ### Tests
 There is no automated test suite yet.

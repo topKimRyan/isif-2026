@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check if supabase client is available
             if (!supabaseClient) {
                 alert('Failed to connect to the database. Please check your settings.');
-                sessionStorage.removeItem('report_id'); // Clear session storage
+                clearReportAuth(); // Clear session storage
                 window.location.href = 'report-error.html'; // Redirect to error page
                 return;
             }
@@ -45,28 +45,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // 1. Insert the new report into the database
-                const { data, error } = await supabaseClient
-                    .from('report_requests')
-                    .insert([
-                        { url: url, status: 'submitted' }
-                    ])
-                    .select() // Return the inserted row
-                    .single(); // Expect a single row back
+                // The function returns the report id and its secret access token
+                const report = await reportRpc('create_report', { p_url: url });
 
-                if (error) {
-                    throw error;
-                }
-
-                if (data) {
-                    const reportId = data.id;
-                    // 2. Store the ID in session storage
-                    sessionStorage.setItem('report_id', reportId);
+                if (report && report.id && report.token) {
+                    // 2. Store the credentials in session storage
+                    saveReportAuth(report.id, report.token);
                     // 3. Redirect to the analysis page
-                    window.location.href = `analysis.html?id=${reportId}`;
+                    window.location.href = `analysis.html?${reportQuery({ id: report.id, token: report.token })}`;
+                } else {
+                    throw new Error('Report was not created.');
                 }
             } catch (error) {
                 console.error('Error submitting report:', error);
-                sessionStorage.removeItem('report_id'); // Clear session storage
+                if (error && error.code === 'PT429') {
+                    alert('Too many reports from your network. Please try again later.');
+                    analysisButton.disabled = false;
+                    analysisButton.textContent = 'Start Analysis';
+                    return;
+                }
+                clearReportAuth(); // Clear session storage
                 window.location.href = 'report-error.html'; // Redirect to error page
             }
         });

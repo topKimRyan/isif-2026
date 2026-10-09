@@ -4,6 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // This is a simple way to handle abandoned processes.
     if (sessionStorage.getItem('report_id')) {
         console.log('Clearing abandoned report session.');
-        sessionStorage.removeItem('report_id');
+        clearReportAuth();
     }
 });

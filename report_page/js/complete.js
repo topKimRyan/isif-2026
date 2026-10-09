@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Clean up the report ID from session storage
-    sessionStorage.removeItem('report_id');
+    clearReportAuth();
 
     // Redirect to the main page after a 3-second delay
     setTimeout(() => {
