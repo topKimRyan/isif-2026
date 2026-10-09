@@ -15,6 +15,7 @@ cp report_page/*.html report_page/supabase_client.js dist/
 cp -r report_page/js report_page/style report_page/img dist/
 
 cp docs/index.html docs/app.js docs/style.css dist/dashboard/
+cp -r docs/brand dist/dashboard/
 
 cat > dist/_headers <<'EOF'
 /*

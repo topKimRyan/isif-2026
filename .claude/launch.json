@@ -8,6 +8,12 @@
       "port": 3001
     },
     {
+      "name": "report",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3003", "--directory", "report_page"],
+      "port": 3003
+    },
+    {
       "name": "site-build",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "3002", "--directory", "dist"],
