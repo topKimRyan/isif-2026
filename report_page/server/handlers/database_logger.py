@@ -29,6 +29,7 @@ async def log_final_report(supabase: Client, report: dict):
         insert_data = {
             'url': report_url,
             'is_illegal': is_illegal,
+            'category': report.get('category'),
             'gemini_confidence': confidence,
             'gemini_reason': reason,
             'gemini_error': gemini_error,

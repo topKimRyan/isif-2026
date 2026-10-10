@@ -53,6 +53,7 @@ class DatabaseManager:
             gemini_reason TEXT,
             gemini_error TEXT,
             detected_keywords JSONB,
+            category TEXT,
             screenshot_url TEXT,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -62,6 +63,11 @@ class DatabaseManager:
         # screenshot_url is written by the report worker; add it to tables created before it existed
         add_screenshot_column = """
         ALTER TABLE gambling_urls ADD COLUMN IF NOT EXISTS screenshot_url TEXT;
+        """
+
+        # category (operator / promotion) was added later; add it to existing tables
+        add_category_column = """
+        ALTER TABLE gambling_urls ADD COLUMN IF NOT EXISTS category TEXT;
         """
 
         # Index on url for fast lookups
@@ -110,6 +116,7 @@ class DatabaseManager:
 
         self.cursor.execute(create_table_query)
         self.cursor.execute(add_screenshot_column)
+        self.cursor.execute(add_category_column)
         self.cursor.execute(create_index_url)
         self.cursor.execute(create_index_illegal)
         self.cursor.execute(create_index_collected)
@@ -153,6 +160,7 @@ class DatabaseManager:
                 gemini_reason = %s,
                 gemini_error = %s,
                 detected_keywords = %s,
+                category = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s;
             """
@@ -164,14 +172,15 @@ class DatabaseManager:
                 url_data.get("gemini_reason"),
                 url_data.get("gemini_error"),
                 Json(url_data.get("detected_keywords", [])),
+                url_data.get("category"),
                 entry_id_to_update
             ))
         else:
             insert_query = """
             INSERT INTO gambling_urls (
                 url, keyword_used, collected_at, is_illegal,
-                gemini_confidence, gemini_reason, gemini_error, detected_keywords
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                gemini_confidence, gemini_reason, gemini_error, detected_keywords, category
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
             """
             self.cursor.execute(insert_query, (
                 url_data.get("url"),
@@ -181,7 +190,8 @@ class DatabaseManager:
                 url_data.get("gemini_confidence"),
                 url_data.get("gemini_reason"),
                 url_data.get("gemini_error"),
-                Json(url_data.get("detected_keywords", []))
+                Json(url_data.get("detected_keywords", [])),
+                url_data.get("category")
             ))
 
         self.connection.commit()

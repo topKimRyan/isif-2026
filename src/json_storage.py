@@ -24,6 +24,7 @@ class JSONStorage:
             if classification_results and i < len(classification_results):
                 result = classification_results[i]
                 entry["is_illegal"] = result.get("is_illegal", False)
+                entry["category"] = result.get("category")
                 entry["gemini_confidence"] = result.get("confidence", 0.0)
                 entry["gemini_reason"] = result.get("reason", "")
                 entry["gemini_error"] = result.get("error", None)

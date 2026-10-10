@@ -11,6 +11,10 @@ import re
 class GeminiClassifier:
     """Classifies websites as illegal gambling sites using the Gemini API."""
 
+    # operator = runs illegal gambling, promotion = advertises/steers to it (both count as illegal)
+    CATEGORIES = ("operator", "promotion", "informational", "none")
+    ILLEGAL_CATEGORIES = ("operator", "promotion")
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize GeminiClassifier.
@@ -44,6 +48,7 @@ class GeminiClassifier:
             {
                 "url": str,
                 "is_illegal": bool,
+                "category": "operator" | "promotion" | "informational" | "none" | None,
                 "confidence": float (0.0-1.0),
                 "reason": str,
                 "detected_keywords": list,
@@ -73,6 +78,7 @@ class GeminiClassifier:
             return {
                 "url": url,
                 "is_illegal": result.get("is_illegal", False),
+                "category": result.get("category"),
                 "confidence": result.get("confidence", 0.0),
                 "reason": result.get("reason", ""),
                 "detected_keywords": result.get("detected_keywords", []),
@@ -83,6 +89,7 @@ class GeminiClassifier:
             return {
                 "url": url,
                 "is_illegal": False,
+                "category": None,
                 "confidence": 0.0,
                 "reason": "",
                 "detected_keywords": [],
@@ -118,26 +125,27 @@ class GeminiClassifier:
     def _build_prompt(self, url: str, text_content: str) -> str:
         """Builds the classification prompt for illegal gambling site detection."""
 
-        prompt = f"""You are an expert at detecting illegal online gambling websites.
+        prompt = f"""You are an expert at detecting illegal online gambling websites and the pages that promote them.
 
-Analyze the following website information and determine whether it is an illegal gambling site.
+Analyze the following website information and classify it into exactly one category.
 
 URL: {url}
 
 Website content:
 {text_content}
 
-Detection criteria:
-1. Betting/gambling-related keywords (betting, casino, poker, slots, sports betting, baccarat, etc.)
-2. Payment methods offered (credit card, cryptocurrency, wire transfer, deposit, withdraw, etc.)
-3. Login/registration system (login, signup, register, etc.)
-4. Language suggesting illegality (anonymous, untraceable, VPN, hidden, etc.)
-5. Regional regulation evasion (bypass, offshore, etc.)
-6. Gambling terms in any language
+Categories:
+- "operator": the site itself runs illegal gambling (betting, casino, poker, slots, sports betting, baccarat, etc.) with deposits/withdrawals, login/registration, or play.
+- "promotion": the page does not run gambling itself but advertises or steers visitors to illegal gambling sites. Examples: scam-verification / "eat-and-run" verification (먹튀검증) pages, "safe playground" (안전놀이터) or recommended-site lists, affiliate/referral pages, bonus/promo-code pages, and mirror/link-collection pages. This also applies to user-uploaded spam documents on hosting platforms (e.g. Scribd, blogs, forums) that exist to promote such sites.
+- "informational": neutral or protective content about gambling that does not promote any gambling site. Examples: news, addiction prevention or counseling, legal or regulatory explanations, academic or encyclopedic articles.
+- "none": unrelated to gambling.
+
+Signals for operator/promotion: gambling keywords in any language, payment methods (deposit, withdraw, crypto), login/registration, language suggesting illegality (anonymous, untraceable, VPN, hidden), regional regulation evasion (bypass, offshore), and recommendation or verification claims about gambling sites. Mentioning gambling alone is not enough: judge whether the page runs or promotes gambling sites.
 
 Response format (return JSON only):
 {{
-  "is_illegal": true/false,
+  "category": "operator" | "promotion" | "informational" | "none",
+  "is_illegal": true if category is "operator" or "promotion", otherwise false,
   "confidence": 0.0-1.0,
   "reason": "Reason for the decision (one or two sentences)",
   "detected_keywords": ["keyword1", "keyword2"]
@@ -175,7 +183,16 @@ Be accurate and objective. Return only the JSON with no additional text."""
         is_illegal = result["is_illegal"]
         if isinstance(is_illegal, str):
             is_illegal = is_illegal.strip().lower() == "true"
-        result["is_illegal"] = bool(is_illegal)
+        is_illegal = bool(is_illegal)
+
+        # The category decides the verdict when it is valid; otherwise keep the model's boolean
+        category = str(result.get("category") or "").strip().lower()
+        if category in self.CATEGORIES:
+            is_illegal = category in self.ILLEGAL_CATEGORIES
+        else:
+            category = None if is_illegal else "none"
+        result["is_illegal"] = is_illegal
+        result["category"] = category
 
         try:
             confidence = float(result.get("confidence", 0.0))

@@ -28,7 +28,7 @@ async function loadData() {
         const { data, error } = await supabaseClient
             .from('gambling_urls')
             // Only the columns the public dashboard may read (see supabase/security.sql)
-            .select('url, keyword_used, gemini_confidence, collected_at, detected_keywords, screenshot_url, gemini_reason, is_illegal')
+            .select('url, keyword_used, gemini_confidence, collected_at, detected_keywords, screenshot_url, gemini_reason, is_illegal, category')
             .eq('is_illegal', true)
             .order('collected_at', { ascending: false });
 
@@ -105,6 +105,7 @@ function renderTable(sites) {
                    title="${escapeHtml(site.url)}">
                     ${escapeHtml(truncateUrl(site.url, 55))}
                 </a>
+                ${site.category === 'promotion' ? '<span class="keyword-chip">Promotion</span>' : ''}
             </td>
             <td>${keywordLabel}</td>
             <td>
@@ -170,6 +171,10 @@ function showDetail(index) {
             <div class="modal-value">${escapeHtml(site.keyword_used || '—')}</div>
         </div>
         <div class="modal-section">
+            <div class="modal-label">Category</div>
+            <div class="modal-value">${escapeHtml(categoryLabel(site.category))}</div>
+        </div>
+        <div class="modal-section">
             <div class="modal-label">Confidence Score</div>
             <div class="modal-value">
                 <span class="confidence-badge ${confClass}">${confVal}</span>
@@ -219,6 +224,12 @@ function safeUrl(url) {
     } catch {
         return '#';
     }
+}
+
+function categoryLabel(category) {
+    if (category === 'operator') return 'Gambling site (operator)';
+    if (category === 'promotion') return 'Promotion (steers visitors to gambling sites)';
+    return '—';
 }
 
 function extractDomain(url) {
