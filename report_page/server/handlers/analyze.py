@@ -77,6 +77,7 @@ async def handle_analysis(supabase: Client, report: dict):
         # 3. Update the report in Supabase with the analysis results
         update_data = {
             'is_illegal': analysis_result.get('is_illegal'),
+            'category': analysis_result.get('category'),
             'confidence': analysis_result.get('confidence'),
             'reason': analysis_result.get('reason'),
             'detected_keywords': analysis_result.get('detected_keywords'),

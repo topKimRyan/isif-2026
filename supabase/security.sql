@@ -16,9 +16,13 @@ begin;
 -- ---------------------------------------------------------------------------------------
 alter table public.gambling_urls enable row level security;
 
+-- operator = runs illegal gambling, promotion = advertises/steers to it (e.g. 먹튀검증 pages)
+alter table public.gambling_urls add column if not exists category text;
+alter table public.report_requests add column if not exists category text;
+
 revoke all on public.gambling_urls from anon, authenticated;
 grant select (url, keyword_used, gemini_confidence, collected_at, detected_keywords,
-              screenshot_url, gemini_reason, is_illegal)
+              screenshot_url, gemini_reason, is_illegal, category)
     on public.gambling_urls to anon, authenticated;
 
 drop policy if exists "Public can read illegal sites" on public.gambling_urls;
