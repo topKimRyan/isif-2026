@@ -20,8 +20,6 @@ class KeywordExpander:
         "deposit", "withdraw", "withdrawal", "payment", "crypto", "bitcoin", "cryptocurrency",
         "login", "sign up", "register", "registration", "account", "vip",
         "odds", "games", "live casino", "esports", "toto",
-        "도박", "카지노", "베팅", "배팅", "슬롯", "바카라", "포커", "토토", "입금", "출금",
-        "보너스", "이벤트", "회원가입", "로그인",
     }
 
     def __init__(
@@ -39,12 +37,15 @@ class KeywordExpander:
         """
         Turns a detected keyword into a search query.
 
-        Gemini writes non-English keywords as "바카라 (baccarat)"; the original term is kept
-        because illegal sites are found by the words they themselves use.
+        Gemini writes non-English keywords as "바카라 (baccarat)"; the English translation is
+        used because the crawler searches in English only.
         """
         keyword = str(keyword)
-        if "(" in keyword and not keyword.lstrip().startswith("("):
-            keyword = keyword.split("(", 1)[0]
+        match = re.search(r"^(.*?)\(([^()]+)\)\s*$", keyword)
+        if match and match.group(1).strip():
+            original, note = match.group(1), match.group(2)
+            # "Bet365 (UK)" is already English; keep it and drop the note
+            keyword = original if original.isascii() else note
         keyword = keyword.strip(" \t\"'`.,;:!?-·").lower()
         return re.sub(r"\s+", " ", keyword)
 
@@ -54,6 +55,9 @@ class KeywordExpander:
         if keyword in self.GENERIC_KEYWORDS:
             return False
         if keyword.isdigit():
+            return False
+        # English only: drop keywords that are still non-English (no translation was given)
+        if not keyword.isascii():
             return False
         # URLs and domains find the site itself, not new sites
         if "://" in keyword or "/" in keyword or re.search(r"\w\.[a-z]{2,}$", keyword):

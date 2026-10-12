@@ -197,7 +197,7 @@ The crawler follows a modular design with clear separation of concerns:
 3. URLExtractor removes tracking parameters from visited URLs; already-known URLs are skipped
 4. GeminiClassifier analyzes each page (optional, if enabled in settings)
 5. JSONStorage saves the sites classified as illegal, with timestamps (UTC) and classification metadata
-6. Keyword expansion (if `expand_keywords`): KeywordExpander takes the `detected_keywords` of the round's illegal sites, keeps the original term of translated keywords (`바카라 (baccarat)` → `바카라`), drops already-searched, overly generic (`casino`, `토토`, …), domain/URL, and too-long keywords, keeps those seen on at least `min_keyword_site_count` sites, ranks them by site count then summed confidence, and steps 2–5 run again with them as the next round. Each saved entry records its `search_round`
+6. Keyword expansion (if `expand_keywords`): KeywordExpander takes the `detected_keywords` of the round's illegal sites, uses the English translation of non-English keywords (`바카라 (baccarat)` → `baccarat`; the crawler searches in English only), drops already-searched, overly generic (`casino`, `toto`, …), still non-English, domain/URL, and too-long keywords, keeps those seen on at least `min_keyword_site_count` sites, ranks them by site count then summed confidence, and steps 2–5 run again with them as the next round. Each saved entry records its `search_round`
 7. A failed search (e.g. Google CAPTCHA) skips that keyword; the browser is always closed at the end
 
 **Gemini Classification Integration:**
