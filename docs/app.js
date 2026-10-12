@@ -3,26 +3,66 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let allSites = [];
+let rawSites = [];   // every row from Supabase
+let allSites = [];   // rawSites after the viewer's Settings filters
 let filteredSites = [];
 
+const VIEW_TITLES = { sites: 'Detected Sites', analytics: 'Analytics', logs: 'Logs', settings: 'Settings' };
+
 document.addEventListener('DOMContentLoaded', () => {
+    showView(viewFromHash());
     loadData();
     document.getElementById('search-input').addEventListener('input', (e) => {
         filterSites(e.target.value);
     });
 });
 
-async function loadData() {
+window.addEventListener('hashchange', () => showView(viewFromHash()));
+
+function viewFromHash() {
+    const view = location.hash.replace('#', '');
+    if (VIEW_TITLES[view]) return view;
+    const saved = getSetting('defaultView');
+    return VIEW_TITLES[saved] ? saved : 'sites';
+}
+
+// Switch between the "Detected Sites" table and the "Analytics" charts
+function showView(view) {
+    document.getElementById('view-sites').hidden     = view !== 'sites';
+    document.getElementById('view-analytics').hidden = view !== 'analytics';
+    document.getElementById('view-logs').hidden      = view !== 'logs';
+    document.getElementById('view-settings').hidden  = view !== 'settings';
+    document.getElementById('topbar-title').textContent = VIEW_TITLES[view];
+    document.querySelectorAll('.nav-link[data-view]').forEach(link => {
+        link.classList.toggle('active', link.dataset.view === view);
+    });
+    // Charts size themselves to their container, so draw them once the view is visible
+    if (view === 'analytics' && typeof renderAnalytics === 'function') renderAnalytics();
+    if (view === 'logs' && typeof renderLogs === 'function') renderLogs();
+    if (view === 'settings') renderSettingsInfo();
+}
+
+// Open the sites table filtered by a term (used by the analytics charts)
+function showSitesFor(term) {
+    const input = document.getElementById('search-input');
+    input.value = term;
+    filterSites(term);
+    location.hash = 'sites';
+}
+
+// silent: keep the current table on screen while reloading (used by auto-refresh)
+async function loadData({ silent = false } = {}) {
     const loadingEl   = document.getElementById('loading');
     const errorEl     = document.getElementById('error');
     const tableEl     = document.getElementById('sites-table');
     const emptyEl     = document.getElementById('empty-state');
 
-    loadingEl.style.display = 'flex';
-    errorEl.style.display   = 'none';
-    tableEl.style.display   = 'none';
-    emptyEl.style.display   = 'none';
+    if (!silent) {
+        loadingEl.style.display = 'flex';
+        tableEl.style.display   = 'none';
+        emptyEl.style.display   = 'none';
+    }
+    errorEl.style.display = 'none';
 
     try {
         const { data, error } = await supabaseClient
@@ -34,11 +74,9 @@ async function loadData() {
 
         if (error) throw error;
 
-        allSites = data || [];
-        filteredSites = [...allSites];
-
-        updateStatistics(allSites);
-        renderTable(filteredSites);
+        rawSites = data || [];
+        lastLoadedAt = new Date();
+        reapplySiteSettings();
 
         loadingEl.style.display = 'none';
 
@@ -48,6 +86,16 @@ async function loadData() {
         document.getElementById('error-msg').textContent = `Failed to load data: ${err.message}`;
         errorEl.style.display = 'flex';
     }
+}
+
+// Re-run the Settings filters over the loaded rows and redraw every view
+function reapplySiteSettings() {
+    allSites = applySiteSettings(rawSites);
+    updateStatistics(allSites);
+    filterSites(document.getElementById('search-input').value);
+    if (typeof renderAnalytics === 'function') renderAnalytics();
+    if (typeof renderLogs === 'function') renderLogs();
+    renderSettingsInfo();
 }
 
 function updateStatistics(sites) {
@@ -132,14 +180,19 @@ function filterSites(term) {
     filteredSites = q
         ? allSites.filter(s =>
             s.url.toLowerCase().includes(q) ||
-            (s.keyword_used && s.keyword_used.toLowerCase().includes(q))
+            (s.keyword_used && s.keyword_used.toLowerCase().includes(q)) ||
+            (Array.isArray(s.detected_keywords) &&
+             s.detected_keywords.some(k => String(k).toLowerCase().includes(q)))
           )
         : [...allSites];
     renderTable(filteredSites);
 }
 
 function showDetail(index) {
-    const site = filteredSites[index];
+    showSiteDetail(filteredSites[index]);
+}
+
+function showSiteDetail(site) {
     const modal = document.getElementById('detail-modal');
     const body  = document.getElementById('modal-body');
 
