@@ -121,6 +121,12 @@ The crawler is controlled via `settings.json`:
 - `combine_keywords`: Also search every 2-keyword pair (true/false). With N keywords this adds N·(N−1)/2 searches, so keep it off for long keyword lists
 - `captcha_wait_seconds`: When Google shows a CAPTCHA, how long to wait for you to solve it by hand in the visible Chrome window (requires `headless_mode: false`); the keyword is skipped if it isn't solved in time
 - `page_load_timeout`: Seconds to wait for a site to load before stopping it and using what has loaded (sites that never finish loading would otherwise block the crawler)
+- `expand_keywords`: After searching `keywords.json` (round 0), search keywords that Gemini detected on the illegal sites found, round after round (true/false; needs the Gemini classifier)
+- `max_expansion_rounds`: How many expansion rounds to run after round 0; expansion also stops early when a round yields no new keyword
+- `max_new_keywords_per_round`: Most keywords searched in one expansion round (best-ranked first)
+- `min_keyword_site_count`: A detected keyword must appear on at least this many different illegal sites in the round to be searched
+- `min_expansion_confidence`: Only sites classified illegal with at least this Gemini confidence contribute keywords
+- `expansion_log_file`: JSON log of every run's rounds (keywords, the sites they came from, illegal sites found per keyword); not in git. Empty to disable
 
 **Note:** API keys and database credentials are managed via the `.env` file (not `settings.json`).
 
@@ -140,6 +146,7 @@ illicit-gambling-detector/
 ├── src/
 │   ├── crawler.py             # Main orchestrator
 │   ├── keyword_manager.py     # Keyword loading and combinations
+│   ├── keyword_expander.py    # Picks next-round keywords from detected_keywords
 │   ├── search_engine.py       # Google search and page fetching via Selenium
 │   ├── url_extractor.py       # Tracking-parameter removal for URLs
 │   ├── url_safety.py          # Blocks non-public URLs (file://, localhost, private IPs)
@@ -169,6 +176,7 @@ The crawler follows a modular design with clear separation of concerns:
 
 **Core Components:**
 - `src/keyword_manager.py` - Loads keywords from JSON and generates 2-keyword combinations
+- `src/keyword_expander.py` - Ranks the detected keywords of a round's illegal sites and picks the next round's search keywords
 - `src/search_engine.py` - Searches Google with Selenium, collects result links, and visits each one
 - `src/url_extractor.py` - Removes tracking parameters from URLs
 - `src/json_storage.py` - Manages JSON file storage with timestamps and metadata
@@ -189,7 +197,8 @@ The crawler follows a modular design with clear separation of concerns:
 3. URLExtractor removes tracking parameters from visited URLs; already-known URLs are skipped
 4. GeminiClassifier analyzes each page (optional, if enabled in settings)
 5. JSONStorage saves the sites classified as illegal, with timestamps (UTC) and classification metadata
-6. A failed search (e.g. Google CAPTCHA) skips that keyword; the browser is always closed at the end
+6. Keyword expansion (if `expand_keywords`): KeywordExpander takes the `detected_keywords` of the round's illegal sites, keeps the original term of translated keywords (`바카라 (baccarat)` → `바카라`), drops already-searched, overly generic (`casino`, `토토`, …), domain/URL, and too-long keywords, keeps those seen on at least `min_keyword_site_count` sites, ranks them by site count then summed confidence, and steps 2–5 run again with them as the next round. Each saved entry records its `search_round`
+7. A failed search (e.g. Google CAPTCHA) skips that keyword; the browser is always closed at the end
 
 **Gemini Classification Integration:**
 When enabled (`use_gemini_classifier: true`), the crawler:
