@@ -213,3 +213,4 @@ main/
 
 # Cloudflare Pages build output (scripts/build_site.sh)
 dist/
+keyword_expansion.json
