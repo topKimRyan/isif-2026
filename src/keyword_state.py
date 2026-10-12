@@ -11,7 +11,7 @@ class KeywordState:
     Each keyword has a status:
     - "active": searched again once its cooldown has passed (seed keywords always stay active)
     - "rejected": the AI keyword review turned it down; never proposed again
-    - "retired": an expanded keyword that kept finding no illegal sites
+    - "retired": an expanded keyword that found no illegal site in its first few searches
     """
 
     def __init__(self, state_file: str = "keyword_state.json"):
@@ -55,9 +55,9 @@ class KeywordState:
 
     def due_keywords(self, seeds: List[str], cooldown_hours: float, limit: Optional[int] = None) -> List[str]:
         """
-        Keywords to search at the start of a cycle: seeds first (in keywords.json order), then
-        active expanded keywords, best performing first. Anything searched within the cooldown
-        is left for a later cycle.
+        Keywords to search at the start of a cycle, as a rotation: never-searched keywords first
+        (seeds before expanded ones), then the ones searched longest ago. Anything searched
+        within the cooldown is left for a later cycle.
         """
         cooldown = timedelta(hours=cooldown_hours)
         for seed in seeds:
@@ -66,15 +66,14 @@ class KeywordState:
             info["source"] = "seed"
             info["status"] = "active"
 
-        due = [k for k in seeds if not self._searched_within(self.keywords[k], cooldown)]
-
-        expanded = [
-            (k, info) for k, info in self.keywords.items()
-            if info.get("source") == "expanded" and info.get("status") == "active"
-            and not self._searched_within(info, cooldown)
+        seed_set = set(seeds)
+        candidates = [k for k in seeds] + [
+            k for k, info in self.keywords.items()
+            if k not in seed_set and info.get("source") == "expanded" and info.get("status") == "active"
         ]
-        expanded.sort(key=lambda item: (item[1].get("illegal_found", 0), item[1].get("site_count", 0)), reverse=True)
-        due.extend(k for k, _ in expanded)
+        due = [k for k in candidates if not self._searched_within(self.keywords[k], cooldown)]
+        # sort() is stable, so ties keep seeds first and keywords.json order
+        due.sort(key=lambda k: (bool(self.keywords[k].get("last_searched_at")), self.keywords[k].get("last_searched_at", "")))
 
         return due[:limit] if limit else due
 
@@ -116,11 +115,9 @@ class KeywordState:
         info["searches"] = info.get("searches", 0) + 1
         info["illegal_found"] = info.get("illegal_found", 0) + illegal_found
 
-        if illegal_found:
-            info["empty_searches"] = 0
-        else:
-            info["empty_searches"] = info.get("empty_searches", 0) + 1
-            if (info.get("source") == "expanded" and retire_after_empty_searches
-                    and info["empty_searches"] >= retire_after_empty_searches):
-                info["status"] = "retired"
-                print(f"  🗄️ Retired keyword '{keyword}' after {info['empty_searches']} searches with no illegal sites")
+        # Retire only keywords that never found anything: repeat searches of a good keyword
+        # often return only known sites, which says nothing about the keyword
+        if (info.get("source") == "expanded" and retire_after_empty_searches
+                and info["illegal_found"] == 0 and info["searches"] >= retire_after_empty_searches):
+            info["status"] = "retired"
+            print(f"  🗄️ Retired keyword '{keyword}' after {info['searches']} searches with no illegal sites")

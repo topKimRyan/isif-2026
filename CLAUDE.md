@@ -131,8 +131,8 @@ The crawler is controlled via `settings.json`:
 - `ai_keyword_review`: Ask Gemini whether each expansion candidate is a good search for finding illegal gambling sites before it is searched; rejected keywords are remembered and never proposed again
 - `keyword_state_file`: Keyword history across runs (status, last search, illegal sites found); not in git
 - `keyword_cooldown_hours`: A keyword (seed or expanded) is not searched again until this many hours after its last successful search
-- `max_keywords_per_cycle`: Most due keywords searched in round 0 of one cycle (seeds first, then expanded keywords that found the most sites); the rest wait for the next cycle
-- `retire_after_empty_searches`: An expanded keyword is retired after this many searches in a row with no new illegal site (0 = never)
+- `max_keywords_per_cycle`: Most due keywords searched in round 0 of one cycle; keywords rotate (never-searched first, seeds before expanded, then the longest-ago searched), and the rest wait for the next cycle
+- `retire_after_empty_searches`: An expanded keyword is retired once it has been searched this many times without ever finding an illegal site (0 = never)
 - `continuous_mode`: Keep running cycles until Ctrl+C instead of stopping after one
 - `cycle_interval_minutes`: Pause between cycles in continuous mode
 - `auto_import_to_db`: After each cycle, import `results.json` into Supabase (same as `import_from_json`); if the import fails, the results stay in the file for the next cycle

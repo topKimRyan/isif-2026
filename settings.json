@@ -17,10 +17,10 @@
   "expansion_log_file": "keyword_expansion.json",
   "ai_keyword_review": true,
   "keyword_state_file": "keyword_state.json",
-  "keyword_cooldown_hours": 24,
-  "max_keywords_per_cycle": 30,
+  "keyword_cooldown_hours": 3,
+  "max_keywords_per_cycle": 10,
   "retire_after_empty_searches": 3,
   "continuous_mode": true,
-  "cycle_interval_minutes": 60,
+  "cycle_interval_minutes": 5,
   "auto_import_to_db": true
 }
