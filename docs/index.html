@@ -20,17 +20,17 @@
     </div>
     <nav class="sidebar-nav">
         <span class="nav-label">Monitor</span>
-        <a class="nav-link active" href="#">
+        <a class="nav-link active" href="#sites" data-view="sites">
             <span class="icon">📋</span> Detected Sites
         </a>
-        <a class="nav-link" href="#">
+        <a class="nav-link" href="#analytics" data-view="analytics">
             <span class="icon">📊</span> Analytics
         </a>
         <span class="nav-label">System</span>
-        <a class="nav-link" href="#">
+        <a class="nav-link" href="#settings" data-view="settings">
             <span class="icon">⚙️</span> Settings
         </a>
-        <a class="nav-link" href="#">
+        <a class="nav-link" href="#logs" data-view="logs">
             <span class="icon">📄</span> Logs
         </a>
     </nav>
@@ -40,13 +40,21 @@
 <div class="main-wrapper">
     <!-- Top bar -->
     <header class="topbar">
-        <span class="topbar-title">Detected Sites</span>
+        <span class="topbar-title" id="topbar-title">Detected Sites</span>
         <div class="topbar-right">
-            <button class="btn btn-primary">＋ Add Report</button>
+            <!-- The report service is served at the site root; the dashboard lives at /dashboard/ -->
+            <a class="btn btn-primary" href="../" target="_blank" rel="noopener">＋ Add Report</a>
         </div>
     </header>
 
     <main class="container">
+        <!-- Error banner (shared by both views) -->
+        <div id="error" class="error-banner" style="display:none;">
+            <span>⚠️</span>
+            <span id="error-msg">Failed to load data.</span>
+        </div>
+
+        <section id="view-sites">
         <div class="page-header">
             <h1>Illegal Gambling Sites</h1>
             <p>AI-detected sites flagged as illegal online gambling</p>
@@ -77,12 +85,6 @@
                 <div class="stat-label">Last Updated</div>
                 <div class="stat-value" id="last-update" style="font-size:16px;margin-top:4px">—</div>
             </div>
-        </div>
-
-        <!-- Error banner -->
-        <div id="error" class="error-banner" style="display:none;">
-            <span>⚠️</span>
-            <span id="error-msg">Failed to load data.</span>
         </div>
 
         <!-- Table card -->
@@ -126,6 +128,197 @@
 
             <div class="table-footer" id="table-footer"></div>
         </div>
+        </section>
+
+        <!-- ── Analytics view ─────────────────────────────── -->
+        <section id="view-analytics" hidden>
+            <div class="page-header">
+                <h1>Analytics</h1>
+                <p>Trends and breakdowns of the detected illegal gambling sites</p>
+            </div>
+
+            <!-- One filter row scopes every chart below it -->
+            <div class="filter-row" role="group" aria-label="Date range">
+                <span class="filter-label">Period</span>
+                <div class="segmented" id="range-picker">
+                    <button type="button" data-range="7">7 days</button>
+                    <button type="button" data-range="30">30 days</button>
+                    <button type="button" data-range="90">90 days</button>
+                    <button type="button" data-range="all">All time</button>
+                </div>
+                <button class="btn btn-outline" onclick="loadData()">↺ Refresh</button>
+            </div>
+
+            <div class="stats-section" id="an-stats"></div>
+
+            <div class="chart-card chart-wide">
+                <div class="chart-head">
+                    <h3>Detections over time</h3>
+                    <span class="chart-sub" id="an-timeline-sub"></span>
+                </div>
+                <div class="column-chart" id="an-timeline"></div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>Site type</h3>
+                        <span class="chart-sub">Operator sites vs. pages promoting them</span>
+                    </div>
+                    <div id="an-category"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>Detection source</h3>
+                        <span class="chart-sub">Crawler search vs. user reports</span>
+                    </div>
+                    <div id="an-source"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>Top search keywords</h3>
+                        <span class="chart-sub">Click a keyword to see its sites</span>
+                    </div>
+                    <div id="an-keywords"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>Keywords found on pages</h3>
+                        <span class="chart-sub">Gambling terms the AI detected</span>
+                    </div>
+                    <div id="an-detected"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>AI confidence</h3>
+                        <span class="chart-sub">Number of sites per confidence score</span>
+                    </div>
+                    <div class="column-chart" id="an-confidence"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>Top domain endings</h3>
+                        <span class="chart-sub">Where the sites are registered</span>
+                    </div>
+                    <div id="an-tld"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Logs view ──────────────────────────────────── -->
+        <section id="view-logs" hidden>
+            <div class="page-header">
+                <h1>Logs</h1>
+                <p>Every detection in time order, from the crawler and from user reports</p>
+            </div>
+
+            <div class="filter-row" role="group" aria-label="Log filters">
+                <span class="filter-label">Source</span>
+                <div class="segmented" id="log-source-picker">
+                    <button type="button" data-source="all" class="active">All</button>
+                    <button type="button" data-source="crawler">Crawler</button>
+                    <button type="button" data-source="report">User reports</button>
+                </div>
+                <span class="filter-label">Type</span>
+                <div class="segmented" id="log-category-picker">
+                    <button type="button" data-category="all" class="active">All</button>
+                    <button type="button" data-category="operator">Gambling sites</button>
+                    <button type="button" data-category="promotion">Promotion pages</button>
+                </div>
+                <button class="btn btn-outline" onclick="loadData()">↺ Refresh</button>
+            </div>
+
+            <div class="table-card log-card">
+                <div id="log-list"></div>
+                <div class="table-footer log-footer">
+                    <span id="log-count"></span>
+                    <button class="btn btn-outline" id="log-more" type="button" hidden>Show more</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Settings view ──────────────────────────────── -->
+        <section id="view-settings" hidden>
+            <div class="page-header">
+                <h1>Settings</h1>
+                <p>Dashboard preferences, saved in this browser only
+                    <span class="saved-note" id="settings-saved" hidden>✓ Saved</span></p>
+            </div>
+
+            <div class="settings-card">
+                <h3>Display</h3>
+                <div class="setting-row">
+                    <div class="setting-text">
+                        <span class="setting-name">Start page</span>
+                        <span class="setting-desc">The screen shown when you open the dashboard</span>
+                    </div>
+                    <div class="segmented" data-setting="defaultView">
+                        <button type="button" data-value="sites">Detected Sites</button>
+                        <button type="button" data-value="analytics">Analytics</button>
+                        <button type="button" data-value="logs">Logs</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-text">
+                        <span class="setting-name">Default analytics period</span>
+                        <span class="setting-desc">The period Analytics opens with</span>
+                    </div>
+                    <div class="segmented" data-setting="defaultRange">
+                        <button type="button" data-value="7">7 days</button>
+                        <button type="button" data-value="30">30 days</button>
+                        <button type="button" data-value="90">90 days</button>
+                        <button type="button" data-value="all">All time</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3>Data filters</h3>
+                <div class="setting-row">
+                    <div class="setting-text">
+                        <span class="setting-name">Minimum AI confidence</span>
+                        <span class="setting-desc">Hide sites the AI is less sure about, in every view</span>
+                    </div>
+                    <div class="segmented" data-setting="minConfidence">
+                        <button type="button" data-value="0">Show all</button>
+                        <button type="button" data-value="0.7">0.7+</button>
+                        <button type="button" data-value="0.8">0.8+</button>
+                        <button type="button" data-value="0.9">0.9+</button>
+                    </div>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-text">
+                        <span class="setting-name">Include promotion pages</span>
+                        <span class="setting-desc">Pages that steer visitors to gambling sites without running one</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="set-show-promotion" aria-label="Include promotion pages">
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+                <div class="setting-row">
+                    <div class="setting-text">
+                        <span class="setting-name">Auto refresh</span>
+                        <span class="setting-desc">Reload data from the database in the background</span>
+                    </div>
+                    <div class="segmented" data-setting="autoRefresh">
+                        <button type="button" data-value="0">Off</button>
+                        <button type="button" data-value="1">1 min</button>
+                        <button type="button" data-value="5">5 min</button>
+                        <button type="button" data-value="15">15 min</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <h3>About this data</h3>
+                <div id="settings-info"></div>
+                <p class="settings-note">The crawler's own settings (keywords, search delays) live in
+                    <code>settings.json</code> and <code>keywords.json</code> on the PC that runs it.</p>
+            </div>
+
+            <button class="btn btn-outline" id="settings-reset" type="button">Reset to defaults</button>
+        </section>
     </main>
 </div>
 
@@ -141,6 +334,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="settings.js"></script>
 <script src="app.js"></script>
+<script src="analytics.js"></script>
+<script src="logs.js"></script>
+<div id="chart-tooltip" class="chart-tooltip" role="tooltip" hidden></div>
 </body>
 </html>
