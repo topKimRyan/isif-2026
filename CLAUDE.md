@@ -47,6 +47,7 @@ DB_NAME=postgres
 
 # Google Gemini API Key
 GEMINI_API_KEY=your_gemini_api_key_here
+# GEMINI_API_KEYS=key1,key2,key3   # optional; the next key is used when one hits its quota or is rejected
 # GEMINI_MODEL=gemini-2.5-flash   # optional override
 
 # Supabase API access for the report worker
@@ -58,7 +59,7 @@ SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 
 ### Running the Crawler
 ```bash
-# Basic execution
+# Basic execution (with continuous_mode on, it keeps running cycles until Ctrl+C)
 python main.py
 
 # With explicit venv activation (cross-platform)
@@ -121,6 +122,20 @@ The crawler is controlled via `settings.json`:
 - `combine_keywords`: Also search every 2-keyword pair (true/false). With N keywords this adds N·(N−1)/2 searches, so keep it off for long keyword lists
 - `captcha_wait_seconds`: When Google shows a CAPTCHA, how long to wait for you to solve it by hand in the visible Chrome window (requires `headless_mode: false`); the keyword is skipped if it isn't solved in time
 - `page_load_timeout`: Seconds to wait for a site to load before stopping it and using what has loaded (sites that never finish loading would otherwise block the crawler)
+- `expand_keywords`: After searching `keywords.json` (round 0), search keywords that Gemini detected on the illegal sites found, round after round (true/false; needs the Gemini classifier)
+- `max_expansion_rounds`: How many expansion rounds to run after round 0; expansion also stops early when a round yields no new keyword
+- `max_new_keywords_per_round`: Most keywords searched in one expansion round (best-ranked first)
+- `min_keyword_site_count`: A detected keyword must appear on at least this many different illegal sites in the round to be searched
+- `min_expansion_confidence`: Only sites classified illegal with at least this Gemini confidence contribute keywords
+- `expansion_log_file`: JSON log of every run's rounds (keywords, the sites they came from, illegal sites found per keyword); not in git. Empty to disable
+- `ai_keyword_review`: Ask Gemini whether each expansion candidate is a good search for finding illegal gambling sites before it is searched; rejected keywords are remembered and never proposed again
+- `keyword_state_file`: Keyword history across runs (status, last search, illegal sites found); not in git
+- `keyword_cooldown_hours`: A keyword (seed or expanded) is not searched again until this many hours after its last successful search
+- `max_keywords_per_cycle`: Most due keywords searched in round 0 of one cycle; keywords rotate (never-searched first, seeds before expanded, then the longest-ago searched), and the rest wait for the next cycle
+- `retire_after_empty_searches`: An expanded keyword is retired once it has been searched this many times without ever finding an illegal site (0 = never)
+- `continuous_mode`: Keep running cycles until Ctrl+C instead of stopping after one
+- `cycle_interval_minutes`: Pause between cycles in continuous mode
+- `auto_import_to_db`: After each cycle, import `results.json` into Supabase (same as `import_from_json`); if the import fails, the results stay in the file for the next cycle
 
 **Note:** API keys and database credentials are managed via the `.env` file (not `settings.json`).
 
@@ -140,6 +155,8 @@ illicit-gambling-detector/
 ├── src/
 │   ├── crawler.py             # Main orchestrator
 │   ├── keyword_manager.py     # Keyword loading and combinations
+│   ├── keyword_expander.py    # Picks next-round keywords from detected_keywords
+│   ├── keyword_state.py       # Keyword history: cooldowns, carried-over and rejected keywords
 │   ├── search_engine.py       # Google search and page fetching via Selenium
 │   ├── url_extractor.py       # Tracking-parameter removal for URLs
 │   ├── url_safety.py          # Blocks non-public URLs (file://, localhost, private IPs)
@@ -169,6 +186,8 @@ The crawler follows a modular design with clear separation of concerns:
 
 **Core Components:**
 - `src/keyword_manager.py` - Loads keywords from JSON and generates 2-keyword combinations
+- `src/keyword_expander.py` - Ranks the detected keywords of a round's illegal sites and picks the next round's search keywords
+- `src/keyword_state.py` - Keeps the keyword history across runs: which keywords are due, carried-over expanded keywords, rejected and retired ones
 - `src/search_engine.py` - Searches Google with Selenium, collects result links, and visits each one
 - `src/url_extractor.py` - Removes tracking parameters from URLs
 - `src/json_storage.py` - Manages JSON file storage with timestamps and metadata
@@ -184,12 +203,14 @@ The crawler follows a modular design with clear separation of concerns:
 - `results.json` - Output file containing collected URLs with metadata
 
 **Data Flow:**
-1. KeywordManager loads keywords and generates combinations
+1. KeywordManager loads the seed keywords; KeywordState picks the keywords due this cycle (seeds plus expanded keywords carried over from earlier cycles, skipping any searched within `keyword_cooldown_hours`)
 2. SearchEngine searches Google, collects result links (skipping Google, news, and reference hosts), and visits each link
-3. URLExtractor removes tracking parameters from visited URLs; already-known URLs are skipped
+3. URLExtractor removes tracking parameters from visited URLs; URLs already stored (in `results.json` or, with `auto_import_to_db`, in the database) or already classified by this process are skipped
 4. GeminiClassifier analyzes each page (optional, if enabled in settings)
 5. JSONStorage saves the sites classified as illegal, with timestamps (UTC) and classification metadata
-6. A failed search (e.g. Google CAPTCHA) skips that keyword; the browser is always closed at the end
+6. Keyword expansion (if `expand_keywords`): KeywordExpander takes the `detected_keywords` of the round's illegal sites, uses the English translation of non-English keywords (`바카라 (baccarat)` → `baccarat`; the crawler searches in English only), drops keywords already in the history, overly generic (`casino`, `toto`, …), still non-English, domain/URL, and too-long keywords, keeps those seen on at least `min_keyword_site_count` sites, and ranks them by site count then summed confidence. With `ai_keyword_review`, Gemini approves or rejects them first. Steps 2–5 run again with the approved keywords as the next round, and they join the history so later cycles search them again. Each saved entry records its `search_round`
+7. A failed search (e.g. Google CAPTCHA) skips that keyword and is not counted as searched, so it is retried next cycle; the browser is always closed at the end of a cycle
+8. With `auto_import_to_db`, `results.json` is imported into Supabase after the cycle; with `continuous_mode`, the crawler waits `cycle_interval_minutes` and starts the next cycle
 
 **Gemini Classification Integration:**
 When enabled (`use_gemini_classifier: true`), the crawler:
@@ -197,6 +218,7 @@ When enabled (`use_gemini_classifier: true`), the crawler:
 - Requests JSON output; the reason is always written in English, and non-English keywords include an English translation
 - Treats unparseable responses as errors (not as "not illegal")
 - Handles missing/invalid API keys gracefully (logs warning, continues without classification)
+- Accepts several keys (`GEMINI_API_KEYS`); on a quota (429), permission (401/403), or invalid-key error it switches to the next key and keeps using whichever key worked
 
 **Report System (`report_page/`):**
 - Users submit a URL; the worker (Supabase Realtime) fetches the page, classifies it, takes a screenshot, and logs the final report to `gambling_urls` with `keyword_used = 'manual report'`

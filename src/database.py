@@ -211,6 +211,11 @@ class DatabaseManager:
 
         return failed
 
+    def get_crawled_urls(self) -> set:
+        """Returns every URL the crawler has stored (manual reports excluded)."""
+        self.cursor.execute("SELECT url FROM gambling_urls WHERE keyword_used != 'manual report';")
+        return {row[0] for row in self.cursor.fetchall()}
+
     def get_illegal_urls(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Retrieves illegal gambling site URLs from the database."""
         query = """

@@ -8,7 +8,8 @@ class JSONStorage:
     def __init__(self, output_file: str = "results.json"):
         self.output_file = output_file
 
-    def save_results(self, urls: List[str], keyword: str, classification_results: List[Dict[str, Any]] = None) -> None:
+    def save_results(self, urls: List[str], keyword: str, classification_results: List[Dict[str, Any]] = None,
+                     search_round: int = 0) -> None:
         utc = timezone.utc
         timestamp = datetime.now(utc).isoformat()
 
@@ -17,7 +18,9 @@ class JSONStorage:
             entry = {
                 "url": url,
                 "keyword_used": keyword,
-                "collected_at": timestamp
+                "collected_at": timestamp,
+                # 0 = keyword from keywords.json, N = keyword detected on sites found in round N-1
+                "search_round": search_round
             }
 
             # Attach classification result if available

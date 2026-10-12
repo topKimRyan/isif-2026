@@ -1,9 +1,9 @@
 import json
 import os
-from typing import Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
+from google.genai import errors, types
 from bs4 import BeautifulSoup
 import re
 
@@ -20,21 +20,65 @@ class GeminiClassifier:
         Initialize GeminiClassifier.
 
         Args:
-            api_key: Google Generative AI API key. If not provided, loaded from .env file.
+            api_key: Google Generative AI API key. If not provided, loaded from .env file
+                (GEMINI_API_KEYS, a comma-separated list tried in order, plus GEMINI_API_KEY).
         """
         # Load environment variables from .env
         load_dotenv()
 
-        # Priority: 1. parameter value, 2. environment variable
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        # Priority: 1. parameter value, 2. environment variables
+        if api_key:
+            keys = [api_key]
+        else:
+            keys = [k.strip() for k in os.getenv("GEMINI_API_KEYS", "").split(",")]
+            keys.append((os.getenv("GEMINI_API_KEY") or "").strip())
+        self.api_keys = list(dict.fromkeys(k for k in keys if k))
 
-        if not self.api_key:
+        if not self.api_keys:
             raise ValueError(
-                "Gemini API key not found. Set GEMINI_API_KEY in your .env file or pass it via the api_key parameter."
+                "Gemini API key not found. Set GEMINI_API_KEY (or GEMINI_API_KEYS) in your .env file or pass it via the api_key parameter."
             )
 
-        self.client = genai.Client(api_key=self.api_key)
+        self.clients = [genai.Client(api_key=k) for k in self.api_keys]
+        self.key_index = 0
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+    @staticmethod
+    def _is_key_error(error: errors.APIError) -> bool:
+        """True when the failure belongs to the API key (quota, invalid, or no permission)."""
+        if error.code in (401, 403, 429):
+            return True
+        return error.code == 400 and "api key" in str(error).lower()
+
+    def _generate_json(self, prompt: str) -> str:
+        """
+        Sends a prompt that asks for JSON and returns the response text.
+
+        When a key runs out of quota or is rejected, the next key is tried; the key that
+        worked is kept for later calls, so a recovered key is reached again in turn.
+        """
+        last_error = None
+        for _ in range(len(self.clients)):
+            try:
+                response = self.clients[self.key_index].models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    # Ask for raw JSON so the response can be parsed reliably
+                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                )
+            except errors.APIError as e:
+                if not self._is_key_error(e) or len(self.clients) == 1:
+                    raise
+                last_error = e
+                print(f"  🔑 Gemini key #{self.key_index + 1} failed ({e.code} {e.status}); switching to the next key")
+                self.key_index = (self.key_index + 1) % len(self.clients)
+                continue
+
+            if not response.text:
+                raise ValueError("Gemini returned an empty response (it may have been blocked)")
+            return response.text
+
+        raise RuntimeError(f"All {len(self.clients)} Gemini API keys failed; last error: {last_error}")
 
     def classify_url(self, url: str, html_content: str) -> Dict[str, Any]:
         """
@@ -63,17 +107,7 @@ class GeminiClassifier:
                 cleaned_html = cleaned_html[:50000]
 
             prompt = self._build_prompt(url, cleaned_html)
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                # Ask for raw JSON so the response can be parsed reliably
-                config=types.GenerateContentConfig(response_mime_type="application/json"),
-            )
-
-            response_text = response.text
-            if not response_text:
-                raise ValueError("Gemini returned an empty response (it may have been blocked)")
-            result = self._parse_response(response_text)
+            result = self._parse_response(self._generate_json(prompt))
 
             return {
                 "url": url,
@@ -204,3 +238,63 @@ Be accurate and objective. Return only the JSON with no additional text."""
         result["detected_keywords"] = [str(k) for k in keywords] if isinstance(keywords, list) else []
 
         return result
+
+    def review_keywords(self, candidates: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """
+        Asks Gemini whether each candidate is a good search query for finding more illegal
+        gambling sites, so keyword expansion does not drift away from gambling.
+
+        Args:
+            candidates: [{"keyword": str, "site_count": int}, ...]
+
+        Returns:
+            {keyword: {"approved": bool, "reason": str}} for every candidate. Keywords the
+            response leaves out are rejected. Raises on API or parsing errors.
+        """
+        if not candidates:
+            return {}
+
+        listing = "\n".join(
+            f"- {c['keyword']} (seen on {c.get('site_count', 1)} illegal gambling sites)" for c in candidates
+        )
+        prompt = f"""You help a research crawler that finds illegal online gambling sites by searching Google.
+
+The keywords below were detected on pages already classified as illegal gambling sites or pages that promote them. Decide for each one whether searching it on Google (in English) is likely to surface MORE illegal gambling sites or their promotion pages.
+
+Approve a keyword when it is specific to illegal or unlicensed gambling, for example: terms about bypassing regulation or self-exclusion, no-KYC or anonymous play, offshore operators, scam-verification ("eat-and-run") or "safe playground" promotion, gambling slang, or names of illegal gambling site types.
+
+Reject a keyword when it is:
+- too generic to find illegal sites (e.g. "casino", "slots", "bonus", "sports")
+- the name of a licensed operator, regulator, payment provider, or other legitimate brand
+- unrelated to gambling, a person's name, or something that is not a search phrase
+- not in English
+
+Keywords:
+{listing}
+
+Return JSON only:
+{{"keywords": [{{"keyword": "<exactly as given>", "approved": true or false, "reason": "<short English reason>"}}]}}"""
+
+        response_text = self._generate_json(prompt).strip()
+        if response_text.startswith("```"):
+            response_text = response_text.strip("`").removeprefix("json").strip()
+        try:
+            data = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse keyword review as JSON: {response_text[:200]!r}") from e
+
+        items = data.get("keywords", []) if isinstance(data, dict) else []
+        verdicts = {}
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            keyword = str(item.get("keyword", "")).strip().lower()
+            approved = item.get("approved")
+            if isinstance(approved, str):
+                approved = approved.strip().lower() == "true"
+            verdicts[keyword] = {"approved": bool(approved), "reason": str(item.get("reason", ""))}
+
+        return {
+            c["keyword"]: verdicts.get(c["keyword"], {"approved": False, "reason": "Not returned by the keyword review"})
+            for c in candidates
+        }
