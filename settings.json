@@ -14,5 +14,13 @@
   "max_new_keywords_per_round": 10,
   "min_keyword_site_count": 2,
   "min_expansion_confidence": 0.7,
-  "expansion_log_file": "keyword_expansion.json"
+  "expansion_log_file": "keyword_expansion.json",
+  "ai_keyword_review": true,
+  "keyword_state_file": "keyword_state.json",
+  "keyword_cooldown_hours": 3,
+  "max_keywords_per_cycle": 10,
+  "retire_after_empty_searches": 3,
+  "continuous_mode": true,
+  "cycle_interval_minutes": 5,
+  "auto_import_to_db": true
 }

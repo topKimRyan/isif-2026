@@ -1,6 +1,6 @@
 import time
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 
@@ -9,7 +9,9 @@ from .search_engine import SearchEngine
 from .url_extractor import URLExtractor
 from .json_storage import JSONStorage
 from .gemini_classifier import GeminiClassifier
+from .database import DatabaseManager, import_from_json
 from .keyword_expander import KeywordExpander
+from .keyword_state import KeywordState
 
 
 class GamblingDomainCrawler:
@@ -33,6 +35,10 @@ class GamblingDomainCrawler:
             min_confidence=self.settings.get("min_expansion_confidence", 0.7),
             max_keywords_per_round=self.settings.get("max_new_keywords_per_round", 10),
         )
+
+        self.keyword_state = KeywordState(self.settings.get("keyword_state_file", "keyword_state.json"))
+        # URLs already stored or classified; kept across cycles so pages aren't re-classified
+        self.known_urls = None
 
         # Initialize Gemini classifier (API key loaded automatically from .env)
         try:
@@ -72,6 +78,9 @@ class GamblingDomainCrawler:
 
             print(f"  🔍 Classifying: {url}")
             result = self.classifier.classify_url(url, html_content)
+            if result.get("error") is None:
+                # Errors are left out so the page is tried again next time
+                self.known_urls.add(url)
 
             if result.get("error") is None and result.get("is_illegal"):
                 print(f"  ✅ Illegal site detected: {url} (confidence: {result.get('confidence', 0):.2f})")
@@ -84,27 +93,89 @@ class GamblingDomainCrawler:
 
         return filtered_urls, classification_results
 
+    def run(self):
+        """Runs one cycle, or keeps running cycles until Ctrl+C when continuous_mode is on."""
+        if not self.settings.get("continuous_mode", False):
+            self.run_cycle()
+            return
+
+        interval_minutes = self.settings.get("cycle_interval_minutes", 60)
+        cycle = 1
+        try:
+            while True:
+                print(f"\n{'#' * 50}\n🔄 Cycle {cycle} started at {datetime.now().astimezone():%Y-%m-%d %H:%M:%S}\n{'#' * 50}")
+                try:
+                    self.run_cycle()
+                except Exception as e:
+                    # A broken cycle (e.g. Chrome failed to start) should not end continuous mode
+                    print(f"❌ Cycle {cycle} failed: {e!r}")
+                next_start = datetime.now().astimezone() + timedelta(minutes=interval_minutes)
+                print(f"\n😴 Next cycle at {next_start:%Y-%m-%d %H:%M:%S} (Ctrl+C to stop)")
+                time.sleep(interval_minutes * 60)
+                cycle += 1
+        except KeyboardInterrupt:
+            print("\n🛑 Stopped by user")
+
+    def run_cycle(self):
+        """Crawls once, then imports the results into Supabase if auto_import_to_db is on."""
+        self.crawl()
+        if self.settings.get("auto_import_to_db", False):
+            print("\n🗄️ Importing results into the database...")
+            try:
+                import_from_json(self.settings.get("output_file", "results.json"))
+            except Exception as e:
+                # The results stay in the JSON file and are imported with the next cycle
+                print(f"❌ Database import failed, results kept in the JSON file: {e!r}")
+
+    def _load_known_urls(self) -> set:
+        urls = self.storage.get_existing_urls()
+        if self.settings.get("auto_import_to_db", False):
+            # Imported results are removed from the JSON file, so ask the database too
+            db = DatabaseManager()
+            try:
+                db.connect()
+                urls |= db.get_crawled_urls()
+                db.disconnect()
+            except Exception as e:
+                print(f"⚠️ Could not load stored URLs from the database: {e!r}")
+        return urls
+
     def crawl(self):
         print("🚀 Starting illegal gambling site crawler...")
 
-        keywords = self.keyword_manager.generate_combinations(
+        if self.known_urls is None:
+            self.known_urls = self._load_known_urls()
+        # Results left in the JSON file (e.g. a failed import) are known too
+        self.known_urls |= self.storage.get_existing_urls()
+
+        seeds = self.keyword_manager.generate_combinations(
             include_pairs=self.settings.get("combine_keywords", True)
         )
-        print(f"📋 Generated {len(keywords)} search queries")
+        cooldown_hours = self.settings.get("keyword_cooldown_hours", 24)
+        keywords = self.keyword_state.due_keywords(
+            seeds, cooldown_hours, limit=self.settings.get("max_keywords_per_cycle")
+        )
+        self.keyword_state.save()
+        print(f"📋 {len(keywords)} keywords due ({len(seeds)} seed keywords; "
+              f"keywords searched in the last {cooldown_hours}h are skipped)")
+        if not keywords:
+            next_due = self.keyword_state.next_due_at(cooldown_hours)
+            if next_due:
+                print(f"ℹ️ Nothing to search yet; the next keyword is due at {next_due.astimezone():%Y-%m-%d %H:%M:%S}")
+            return
 
         delay = self.settings.get("delay_between_searches", 2)
         max_links_per_search = self.settings.get("max_links_per_search", 10)
-        existing_urls = self.storage.get_existing_urls()
+        retire_after = self.settings.get("retire_after_empty_searches", 3)
 
-        # Round 0 searches keywords.json; each later round searches keywords detected on the
+        # Round 0 searches the due keywords; each later round searches keywords detected on the
         # illegal sites of the previous round, until no new keywords come up or the limit is hit
         expand = self.settings.get("expand_keywords", False)
         max_rounds = self.settings.get("max_expansion_rounds", 2) if expand else 0
         if expand and not self.use_classifier:
-            print("⚠️ Keyword expansion needs the Gemini classifier; only the seed keywords will be searched")
+            print("⚠️ Keyword expansion needs the Gemini classifier; only the due keywords will be searched")
             max_rounds = 0
 
-        searched = {KeywordExpander.normalize(k) for k in keywords}
         round_keywords = [{"keyword": k} for k in keywords]
         expansion_log = {"started_at": datetime.now(timezone.utc).isoformat(), "rounds": []}
         first_search = True
@@ -124,13 +195,17 @@ class GamblingDomainCrawler:
 
                     print(f"\n🔎 [round {round_no}, {i}/{len(round_keywords)}] Searching keyword: {keyword}")
                     try:
-                        found = self._process_keyword(keyword, max_links_per_search, existing_urls, round_no)
+                        found = self._process_keyword(keyword, max_links_per_search, self.known_urls, round_no)
                     except Exception as e:
-                        # One failed search (e.g. CAPTCHA or timeout) should not stop the whole crawl
+                        # One failed search (e.g. CAPTCHA or timeout) should not stop the whole crawl;
+                        # it is not recorded as searched, so it is tried again next cycle
                         print(f"  ❌ Search failed for keyword '{keyword}': {e!r}")
-                        found = []
+                        entry["error"] = repr(e)
+                        continue
                     entry["illegal_found"] = len(found)
                     round_results.extend(found)
+                    self.keyword_state.mark_searched(keyword, len(found), retire_after)
+                    self.keyword_state.save()
 
                 expansion_log["rounds"].append({
                     "round": round_no,
@@ -142,11 +217,10 @@ class GamblingDomainCrawler:
                 if round_no == max_rounds:
                     break
 
-                round_keywords = self.keyword_expander.select(round_results, searched)
+                round_keywords = self._next_round_keywords(round_results, round_no)
                 if not round_keywords:
                     print(f"\n🛑 No new keywords from round {round_no}; stopping expansion")
                     break
-                searched.update(e["keyword"] for e in round_keywords)
                 print(f"\n🌱 New keywords for round {round_no + 1}:")
                 for e in round_keywords:
                     print(f"  - {e['keyword']} ({e['site_count']} sites, score {e['score']})")
@@ -154,6 +228,43 @@ class GamblingDomainCrawler:
             self.search_engine.close()
 
         self._print_final_stats()
+
+    def _next_round_keywords(self, round_results: List[Dict[str, Any]], round_no: int) -> List[Dict[str, Any]]:
+        """Picks the next round's keywords and, if enabled, has Gemini approve them first."""
+        # Every keyword in the history is skipped: active ones come back after their cooldown,
+        # rejected and retired ones never
+        known = self.keyword_state.known()
+        max_new = self.keyword_expander.max_keywords_per_round
+        use_review = self.settings.get("ai_keyword_review", True)
+
+        # Review more candidates than needed so rejections don't leave the round short
+        candidates = self.keyword_expander.select(round_results, known, limit=max_new * 2 if use_review else max_new)
+        if not candidates or not use_review:
+            for c in candidates:
+                self.keyword_state.add_expanded(c, round_no + 1)
+            self.keyword_state.save()
+            return candidates
+
+        print(f"\n🤖 Asking Gemini to review {len(candidates)} candidate keywords...")
+        try:
+            verdicts = self.classifier.review_keywords(candidates)
+        except Exception as e:
+            # Unreviewed keywords are not added; they can come up again in a later round
+            print(f"  ⚠️ Keyword review failed, skipping expansion this round: {e!r}")
+            return []
+
+        approved = []
+        for c in candidates:
+            verdict = verdicts[c["keyword"]]
+            if verdict["approved"] and len(approved) < max_new:
+                approved.append(c)
+                self.keyword_state.add_expanded(c, round_no + 1, verdict["reason"])
+            elif not verdict["approved"]:
+                print(f"  🚫 Rejected '{c['keyword']}': {verdict['reason']}")
+                self.keyword_state.reject(c, verdict["reason"])
+            # Approved keywords beyond max_new are left unrecorded and can be proposed again
+        self.keyword_state.save()
+        return approved
 
     def _save_expansion_log(self, expansion_log: Dict[str, Any]):
         """Appends this run's rounds to the expansion log so later runs can be compared."""

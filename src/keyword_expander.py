@@ -64,7 +64,8 @@ class KeywordExpander:
             return False
         return True
 
-    def select(self, classification_results: Iterable[Dict[str, Any]], searched: set) -> List[Dict[str, Any]]:
+    def select(self, classification_results: Iterable[Dict[str, Any]], searched: set,
+               limit: int = None) -> List[Dict[str, Any]]:
         """
         Ranks candidate keywords from one round's illegal-site results.
 
@@ -73,7 +74,7 @@ class KeywordExpander:
             searched: normalized keywords already searched (not modified here)
 
         Returns:
-            Up to max_keywords_per_round entries, best first:
+            Up to limit (default max_keywords_per_round) entries, best first:
             {"keyword": str, "site_count": int, "score": float, "source_urls": [str]}
         """
         candidates: Dict[str, Dict[str, Any]] = {}
@@ -102,4 +103,4 @@ class KeywordExpander:
                 selected.append(entry)
 
         selected.sort(key=lambda e: (e["site_count"], e["score"]), reverse=True)
-        return selected[: self.max_keywords_per_round]
+        return selected[: limit or self.max_keywords_per_round]
