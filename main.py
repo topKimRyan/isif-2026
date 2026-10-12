@@ -3,7 +3,7 @@ from src.crawler import GamblingDomainCrawler
 
 def main():
     crawler = GamblingDomainCrawler()
-    crawler.crawl()
+    crawler.run()
 
 
 if __name__ == "__main__":
